@@ -8,6 +8,7 @@ import com.fs.starfarer.api.util.Misc;
 import org.lazywizard.console.BaseCommandWithSuggestion;
 import org.lazywizard.console.CommonStrings;
 import org.lazywizard.console.Console;
+import worldsmith.FactionEffects;
 import worldsmith.WsUtil;
 
 import java.util.List;
@@ -46,6 +47,8 @@ public class PopCap implements BaseCommandWithSuggestion {
         MarketAPI market = target.getMarket();
         StatBonus mod = market.getStats().getDynamic().getMod(Stats.MAX_MARKET_SIZE);
 
+        // An explicit cap replaces any timed Worldsmith growth freeze (both use Nex's growth limit key).
+        market.getMemoryWithoutUpdate().unset(FactionEffects.MEM_FREEZE);
         if (off) {
             market.getMemoryWithoutUpdate().unset(MEM_GROWTH_LIMIT);
             mod.unmodify(WsUtil.MOD_SOURCE);

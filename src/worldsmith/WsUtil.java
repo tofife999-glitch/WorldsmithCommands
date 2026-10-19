@@ -5,6 +5,7 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.Script;
 import com.fs.starfarer.api.campaign.CampaignUIAPI;
 import com.fs.starfarer.api.campaign.FactionAPI;
+import com.fs.starfarer.api.campaign.JumpPointAPI;
 import com.fs.starfarer.api.campaign.LocationAPI;
 import com.fs.starfarer.api.campaign.PlanetAPI;
 import com.fs.starfarer.api.campaign.PlanetSpecAPI;
@@ -14,6 +15,7 @@ import com.fs.starfarer.api.campaign.StarSystemAPI;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.impl.campaign.procgen.PlanetGenDataSpec;
+import com.fs.starfarer.api.impl.campaign.procgen.StarGenDataSpec;
 import org.lazywizard.console.BaseCommand.CommandContext;
 import org.lazywizard.console.CommandUtils;
 import org.lazywizard.console.Console;
@@ -505,6 +507,150 @@ public final class WsUtil {
 
     public static List<String> list(String... items) {
         return new ArrayList<>(Arrays.asList(items));
+    }
+
+    // ------------------------------------------------------------------ star types
+
+    public static List<PlanetSpecAPI> starTypes() {
+        List<PlanetSpecAPI> out = new ArrayList<>();
+        for (PlanetSpecAPI s : Global.getSettings().getAllPlanetSpecs()) {
+            if (s.isStar() || s.isBlackHole()) out.add(s);
+        }
+        out.sort(Comparator.comparing(PlanetSpecAPI::getPlanetType));
+        return out;
+    }
+
+    /** Black holes, neutron stars and pulsars have special terrain this mod doesn't set up. */
+    public static boolean isSpecialStar(PlanetSpecAPI s) {
+        return s.isBlackHole() || s.isPulsar() || s.getPlanetType().contains("neutron");
+    }
+
+    public static StarGenDataSpec starData(String type) {
+        return (StarGenDataSpec) Global.getSettings().getSpec(StarGenDataSpec.class, type, true);
+    }
+
+    /** Star types that newsystem/changestar can use: normal stars with generator data. */
+    public static boolean isUsableStarType(PlanetSpecAPI s) {
+        return s != null && s.isStar() && !isSpecialStar(s) && starData(s.getPlanetType()) != null;
+    }
+
+    /** Resolves a usable star type by ID or display name. Prints a list on ambiguity / suggestions on no match. */
+    public static PlanetSpecAPI findStarType(String query) {
+        List<PlanetSpecAPI> types = new ArrayList<>();
+        for (PlanetSpecAPI s : starTypes()) {
+            if (isUsableStarType(s)) types.add(s);
+        }
+        for (PlanetSpecAPI s : types) {
+            if (s.getPlanetType().equalsIgnoreCase(query)) return s;
+        }
+        String n = norm(query);
+        List<PlanetSpecAPI> byName = new ArrayList<>();
+        for (PlanetSpecAPI s : types) {
+            if (norm(s.getName()).equals(n) || norm(s.getPlanetType()).equals(n)
+                    || norm(s.getPlanetType()).equals("star " + n)) byName.add(s);
+        }
+        if (byName.size() == 1) return byName.get(0);
+        if (byName.size() > 1) {
+            print("Several star types are called '" + query + "'. Use the type ID:");
+            for (PlanetSpecAPI s : byName) printRaw("  - " + s.getPlanetType() + " (" + s.getName() + ")");
+            return null;
+        }
+        for (PlanetSpecAPI s : starTypes()) {
+            if (s.getPlanetType().equalsIgnoreCase(query) || norm(s.getName()).equals(n)) {
+                print("'" + s.getName() + "' (" + s.getPlanetType() + ") is a special star type (black hole, neutron"
+                        + " star or pulsar, or no generator data), which this command can't use.");
+                return null;
+            }
+        }
+        final java.util.Map<PlanetSpecAPI, Integer> score = new java.util.HashMap<>();
+        List<PlanetSpecAPI> hits = new ArrayList<>();
+        for (PlanetSpecAPI s : types) {
+            int best = Math.min(similarity(query, s.getPlanetType()), similarity(query, s.getName()));
+            if (best == Integer.MAX_VALUE) continue;
+            score.put(s, best);
+            hits.add(s);
+        }
+        hits.sort(Comparator.comparingInt(score::get));
+        if (hits.isEmpty()) {
+            print("Unknown star type '" + query + "'. Type 'startypes' to list all star types.");
+        } else {
+            print("Unknown star type '" + query + "'. Did you mean:");
+            for (int i = 0; i < Math.min(5, hits.size()); i++)
+                printRaw("  - " + hits.get(i).getPlanetType() + " (" + hits.get(i).getName() + ")");
+        }
+        return null;
+    }
+
+    public static List<String> starTypeSuggestions() {
+        List<String> l = new ArrayList<>();
+        for (PlanetSpecAPI s : starTypes()) {
+            if (isUsableStarType(s)) l.add(s.getPlanetType());
+        }
+        return l;
+    }
+
+    // ------------------------------------------------------------------ parsing
+
+    /**
+     * Finds the longest run of leading words that is exactly the name (or ID) of one body of the given kind.
+     * Returns how many words that is (0 if none), or -1 after printing a list if the name is ambiguous.
+     */
+    public static int leadingBody(List<String> parts, Kind kind, SectorEntityToken[] out) {
+        List<SectorEntityToken> candidates = bodies(kind);
+        for (int k = parts.size(); k >= 1; k--) {
+            String n = join(parts, 0, k);
+            List<SectorEntityToken> m = exactMatches(n, candidates);
+            if (m.size() == 1) {
+                out[0] = m.get(0);
+                return k;
+            }
+            if (m.size() > 1) {
+                print(m.size() + " matches for '" + n + "'. Nothing was changed; use the ID instead:");
+                for (SectorEntityToken e : m) printRaw("  - " + describe(e));
+                return -1;
+            }
+        }
+        return 0;
+    }
+
+    // ------------------------------------------------------------------ hyperspace
+
+    /**
+     * Hyperspace jump points that lead into the system: the system's autogenerated list (which can be null)
+     * plus any hyperspace jump point with a destination inside the system, like vanilla's own cleanup code.
+     */
+    public static List<JumpPointAPI> hyperJumpPointsInto(StarSystemAPI sys) {
+        List<JumpPointAPI> out = new ArrayList<>();
+        List<JumpPointAPI> auto = sys.getAutogeneratedJumpPointsInHyper();
+        if (auto != null) out.addAll(auto);
+        for (SectorEntityToken t : Global.getSector().getHyperspace().getJumpPoints()) {
+            if (!(t instanceof JumpPointAPI) || out.contains(t)) continue;
+            JumpPointAPI jp = (JumpPointAPI) t;
+            boolean intoSystem = jp.getDestinationVisualEntity() != null
+                    && jp.getDestinationVisualEntity().getContainingLocation() == sys;
+            if (jp.getDestinations() != null) {
+                for (JumpPointAPI.JumpDestination d : jp.getDestinations()) {
+                    if (d.getDestination() != null && d.getDestination().getContainingLocation() == sys)
+                        intoSystem = true;
+                }
+            }
+            if (intoSystem) out.add(jp);
+        }
+        return out;
+    }
+
+    public static boolean leadsTo(JumpPointAPI jp, SectorEntityToken target) {
+        if (jp.getDestinationVisualEntity() == target) return true;
+        if (jp.getDestinations() == null) return false;
+        for (JumpPointAPI.JumpDestination d : jp.getDestinations()) {
+            if (d.getDestination() == target) return true;
+        }
+        return false;
+    }
+
+    /** Light-years between two hyperspace locations, rounded to one decimal. */
+    public static String ly(float lightYears) {
+        return String.format(Locale.ROOT, "%.1f LY", lightYears);
     }
 
     // ------------------------------------------------------------------ confirmations

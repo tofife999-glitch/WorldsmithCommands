@@ -1,0 +1,195 @@
+package worldsmith.commands;
+
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.Script;
+import com.fs.starfarer.api.campaign.CampaignFleetAPI;
+import com.fs.starfarer.api.campaign.PlanetAPI;
+import com.fs.starfarer.api.campaign.PlanetSpecAPI;
+import com.fs.starfarer.api.campaign.StarSystemAPI;
+import com.fs.starfarer.api.impl.campaign.procgen.NebulaEditor;
+import com.fs.starfarer.api.impl.campaign.procgen.StarAge;
+import com.fs.starfarer.api.impl.campaign.procgen.StarGenDataSpec;
+import com.fs.starfarer.api.impl.campaign.procgen.StarSystemGenerator;
+import com.fs.starfarer.api.impl.campaign.terrain.HyperspaceTerrainPlugin;
+import com.fs.starfarer.api.util.Misc;
+import com.fs.starfarer.api.util.WeightedRandomPicker;
+import org.lazywizard.console.BaseCommandWithSuggestion;
+import org.lazywizard.console.CommonStrings;
+import org.lazywizard.console.Console;
+import org.lwjgl.util.vector.Vector2f;
+import worldsmith.WsUtil;
+
+import java.util.List;
+import java.util.Random;
+
+/** Creates an empty star system (star, light, corona, jump points) at your position in hyperspace. */
+public class NewSystem implements BaseCommandWithSuggestion {
+    private static final String USAGE = "newsystem <name> [star type]";
+    /** Minimum distance to the nearest existing star system. */
+    private static final float MIN_DISTANCE_LY = 1.5f;
+
+    /** Exact star type match without printing anything (used to tell the type apart from the name). */
+    private static PlanetSpecAPI quietStarType(String token) {
+        String n = WsUtil.norm(token);
+        for (PlanetSpecAPI s : WsUtil.starTypes()) {
+            if (!WsUtil.isUsableStarType(s)) continue;
+            if (s.getPlanetType().equalsIgnoreCase(token) || WsUtil.norm(s.getName()).equals(n)) return s;
+        }
+        return null;
+    }
+
+    private static String randomStarType(Random random) {
+        WeightedRandomPicker<String> picker = new WeightedRandomPicker<>(random);
+        for (PlanetSpecAPI s : WsUtil.starTypes()) {
+            if (!WsUtil.isUsableStarType(s)) continue;
+            float w = WsUtil.starData(s.getPlanetType()).getFreqAVERAGE();
+            if (w > 0f) picker.add(s.getPlanetType(), w);
+        }
+        return picker.isEmpty() ? null : picker.pick();
+    }
+
+    @Override
+    public CommandResult runCommand(String args, CommandContext context) {
+        if (!context.isInCampaign()) {
+            Console.showMessage(CommonStrings.ERROR_CAMPAIGN_ONLY);
+            return CommandResult.WRONG_CONTEXT;
+        }
+        List<String> parts = WsUtil.splitArgs(args);
+        boolean yes = WsUtil.endsWithYes(parts);
+        if (yes) parts.remove(parts.size() - 1);
+        if (parts.isEmpty()) {
+            WsUtil.print("Usage: " + USAGE + "   (in hyperspace; 'startypes' lists star types)");
+            return CommandResult.BAD_SYNTAX;
+        }
+        Random random = new Random();
+        String type = null;
+        String last = parts.get(parts.size() - 1);
+        PlanetSpecAPI spec = parts.size() > 1 ? quietStarType(last) : null;
+        if (spec != null) {
+            type = spec.getPlanetType();
+            parts.remove(parts.size() - 1);
+        } else if (last.toLowerCase().startsWith("star_") || last.equalsIgnoreCase("random")) {
+            if (!last.equalsIgnoreCase("random")) {
+                if (WsUtil.findStarType(last) == null) return CommandResult.ERROR;
+            }
+            parts.remove(parts.size() - 1);
+        }
+        if (type == null) type = randomStarType(random);
+        if (type == null) {
+            WsUtil.print("Could not find any usable star type.");
+            return CommandResult.ERROR;
+        }
+        final String name = WsUtil.join(parts, 0, parts.size()).replace('_', ' ').trim();
+        if (name.isEmpty()) {
+            WsUtil.print("The system needs a name. Usage: " + USAGE);
+            return CommandResult.BAD_SYNTAX;
+        }
+        if (!WsUtil.exactSystems(name).isEmpty()) {
+            WsUtil.print("A star system called '" + name + "' already exists. Pick another name.");
+            return CommandResult.ERROR;
+        }
+
+        CampaignFleetAPI fleet = Global.getSector().getPlayerFleet();
+        if (!fleet.getContainingLocation().isHyperspace()) {
+            WsUtil.print("You must be in hyperspace, at the spot where the new system should be.");
+            return CommandResult.WRONG_CONTEXT;
+        }
+        final Vector2f loc = new Vector2f(fleet.getLocation());
+        if (Misc.isInAbyss(loc)) {
+            WsUtil.print("You are in the Abyss; new systems can't be placed there.");
+            return CommandResult.ERROR;
+        }
+        StarSystemAPI nearest = null;
+        float nearestLy = Float.MAX_VALUE;
+        for (StarSystemAPI s : Global.getSector().getStarSystems()) {
+            float d = Misc.getDistanceLY(loc, s.getLocation());
+            if (d < nearestLy) {
+                nearestLy = d;
+                nearest = s;
+            }
+        }
+        if (nearest != null && nearestLy < MIN_DISTANCE_LY) {
+            WsUtil.print("Too close to " + nearest.getName() + " (" + WsUtil.ly(nearestLy) + "); keep at least "
+                    + WsUtil.ly(MIN_DISTANCE_LY) + " away from other systems.");
+            return CommandResult.ERROR;
+        }
+
+        final String starType = type;
+        final String starName = starTypeName(type);
+        if (yes) {
+            WsUtil.cancelPending("newsystem");
+            WsUtil.print(create(name, starType, loc));
+            return CommandResult.SUCCESS;
+        }
+        String question = "Create the star system " + name + " (" + starName + ") here in hyperspace?";
+        WsUtil.print(question);
+        WsUtil.confirm("newsystem", question, "newsystem " + name.replace(' ', '_') + " " + starType + " yes", new Script() {
+            @Override
+            public void run() {
+                WsUtil.runSafely("newsystem", new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!WsUtil.exactSystems(name).isEmpty()) {
+                            WsUtil.report("Did not create " + name + ": a system with that name exists now.");
+                            return;
+                        }
+                        WsUtil.report(create(name, starType, loc));
+                    }
+                });
+            }
+        });
+        return CommandResult.SUCCESS;
+    }
+
+    private static String starTypeName(String type) {
+        for (PlanetSpecAPI s : WsUtil.starTypes()) {
+            if (s.getPlanetType().equals(type)) return s.getName();
+        }
+        return type;
+    }
+
+    /** Builds the system the way StarSystemGenerator does for a single star. */
+    static String create(String name, String type, Vector2f loc) {
+        Random random = new Random();
+        StarSystemAPI sys = Global.getSector().createStarSystem(name);
+        sys.getLocation().set(loc.x, loc.y);
+        sys.setBackgroundTextureFilename(random.nextBoolean()
+                ? "graphics/backgrounds/background2.jpg" : "graphics/backgrounds/background4.jpg");
+
+        StarGenDataSpec data = WsUtil.starData(type);
+        float radius = data.getMinRadius() + random.nextFloat() * (data.getMaxRadius() - data.getMinRadius());
+        float corona = radius * (data.getCoronaMult() + data.getCoronaVar() * (random.nextFloat() - 0.5f));
+        if (corona < data.getCoronaMin()) corona = data.getCoronaMin();
+        float flare = data.getMinFlare() + (data.getMaxFlare() - data.getMinFlare()) * random.nextFloat();
+        PlanetAPI star = sys.initStar("worldsmith_" + Misc.genUID(), type, radius, corona, data.getSolarWind(),
+                flare, data.getCrLossMult());
+        if (star.getName() == null || star.getName().isEmpty()) star.setName(name);
+        sys.setLightColor(Misc.interpolateColor(data.getLightColorMin(), data.getLightColorMax(), random.nextFloat()));
+        StarAge age = data.getAge();
+        if (age == null || !(age == StarAge.YOUNG || age == StarAge.AVERAGE || age == StarAge.OLD)) age = StarAge.AVERAGE;
+        sys.setAge(age);
+        sys.setType(StarSystemGenerator.StarSystemType.SINGLE);
+
+        sys.generateAnchorIfNeeded();
+        sys.autogenerateHyperspaceJumpPoints(true, true); // star entrance plus a fringe jump point
+
+        // Clear the hyperspace clouds around it, as StarSystemGenerator does for new constellations.
+        HyperspaceTerrainPlugin plugin = (HyperspaceTerrainPlugin) Misc.getHyperspaceTerrain().getPlugin();
+        NebulaEditor editor = new NebulaEditor(plugin);
+        float minRadius = plugin.getTileSize() * 2f;
+        float r = sys.getMaxRadiusInHyperspace();
+        editor.clearArc(loc.x, loc.y, 0, r + minRadius * 0.5f, 0, 360f);
+        editor.clearArc(loc.x, loc.y, 0, r + minRadius, 0, 360f, 0.25f);
+
+        WsUtil.invalidateCache();
+        return "Created star system " + sys.getName() + " with " + star.getName() + " (" + star.getSpec().getName()
+                + ") at your position in hyperspace. Jump in and use addplanet, addmoon, addobject and addring to fill it.";
+    }
+
+    @Override
+    public List<String> getSuggestions(int parameter, List<String> previous, CommandContext context) {
+        List<String> l = WsUtil.starTypeSuggestions();
+        l.add("random");
+        return parameter == 0 ? WsUtil.list() : l;
+    }
+}
