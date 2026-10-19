@@ -1,0 +1,9 @@
+Worldsmith Commands - changelog
+
+1.0.0 (2026-10-19)
+- First release for Starsector 0.98a-RC8.
+- Commands: showsystem, visit, npccolony, treatasnpccolony, popcap, planettypes, terraform, rename,
+  addplanet, removeplanet, npcexpedition.
+- Tab completion for planet, station, system and faction names, planet types and keywords.
+- Yes/Cancel confirmation popups (or type the command again with 'yes').
+- Save-safe utility mod: adds nothing of its own to the save.

@@ -1,0 +1,7 @@
+{
+	"masterVersionFile": "https://raw.githubusercontent.com/tofife999-glitch/WorldsmithCommands/main/worldsmith_commands.version",
+	"modName": "Worldsmith Commands",
+	"modVersion": { "major": 1, "minor": 0, "patch": 0 },
+	"directDownloadURL": "https://github.com/tofife999-glitch/WorldsmithCommands/releases/download/v1.0.0/WorldsmithCommands-1.0.0.zip",
+	"changelogURL": "https://raw.githubusercontent.com/tofife999-glitch/WorldsmithCommands/main/changelog.txt"
+}

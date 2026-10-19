@@ -1,0 +1,15 @@
+{
+	"id": "worldsmith_commands",
+	"name": "Worldsmith Commands",
+	"author": "Jan",
+	"version": { "major": 1, "minor": 0, "patch": 0 },
+	"description": "Console commands for shaping the sector: inspect star systems, open any planet's dialog, found NPC colonies, cap colony size, terraform, rename, and add or remove planets. Save-safe: can be added to or removed from a running save.",
+	"gameVersion": "0.98a-RC8",
+	"utility": true,
+	"jars": ["jars/WorldsmithCommands.jar"],
+	"dependencies": [
+		{ "id": "lw_console", "name": "Console Commands" },
+		{ "id": "lw_lazylib", "name": "LazyLib" },
+		{ "id": "nexerelin", "name": "Nexerelin" }
+	]
+}
