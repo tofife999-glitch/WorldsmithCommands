@@ -14,6 +14,7 @@ import com.fs.starfarer.api.campaign.RingBandAPI;
 import com.fs.starfarer.api.campaign.SectorEntityToken;
 import com.fs.starfarer.api.campaign.StarSystemAPI;
 import com.fs.starfarer.api.impl.campaign.ids.MemFlags;
+import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.impl.campaign.terrain.BaseRingTerrain;
 import org.lazywizard.console.BaseCommandWithSuggestion;
 import org.lazywizard.console.CommonStrings;
@@ -21,8 +22,10 @@ import org.lazywizard.console.Console;
 import worldsmith.WsUtil;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -47,6 +50,8 @@ public class RemovePlanet implements BaseCommandWithSuggestion {
         final List<JumpPointAPI> resetVisual = new ArrayList<>();
         final List<NascentGravityWellAPI> wells = new ArrayList<>();
         final List<CampaignFleetAPI> fleets = new ArrayList<>();
+        /** Vanilla decorative "Habitat" debris (tag orbital_junk); the game deletes and regenerates it anyway. */
+        final List<SectorEntityToken> junk = new ArrayList<>();
         boolean missionImportant;
     }
 
@@ -121,6 +126,7 @@ public class RemovePlanet implements BaseCommandWithSuggestion {
         for (SectorEntityToken j : p.systemJumpPoints) also.add("jump point " + j.getName());
         for (JumpPointAPI j : p.hyperRemove) also.add("hyperspace jump point " + j.getName());
         if (!p.wells.isEmpty()) also.add(p.wells.size() + " hyperspace gravity well(s)");
+        if (!p.junk.isEmpty()) also.add(p.junk.size() + " pieces of decorative orbital debris");
         String s = also.isEmpty() ? "" : " This also removes: " + String.join(", ", also) + ".";
         if (p.missionImportant)
             s += " WARNING: it is marked as important for an active mission; removing it may break that mission.";
@@ -147,8 +153,13 @@ public class RemovePlanet implements BaseCommandWithSuggestion {
         return null;
     }
 
+    private static List<JumpPointAPI.JumpDestination> destinations(JumpPointAPI jp) {
+        List<JumpPointAPI.JumpDestination> d = jp.getDestinations();
+        return d == null ? new ArrayList<JumpPointAPI.JumpDestination>() : d;
+    }
+
     private static boolean leadsTo(JumpPointAPI jp, SectorEntityToken target) {
-        for (JumpPointAPI.JumpDestination d : jp.getDestinations()) {
+        for (JumpPointAPI.JumpDestination d : destinations(jp)) {
             if (d.getDestination() == target) return true;
         }
         return false;
@@ -190,7 +201,7 @@ public class RemovePlanet implements BaseCommandWithSuggestion {
             for (SectorEntityToken h : hyper.getJumpPoints()) {
                 if (h instanceof JumpPointAPI && leadsTo((JumpPointAPI) h, jp)) partners.add((JumpPointAPI) h);
             }
-            for (JumpPointAPI.JumpDestination d : jp.getDestinations()) {
+            for (JumpPointAPI.JumpDestination d : destinations(jp)) {
                 SectorEntityToken dest = d.getDestination();
                 if (dest instanceof JumpPointAPI && dest.getContainingLocation() == hyper && !partners.contains(dest))
                     partners.add((JumpPointAPI) dest);
@@ -210,12 +221,14 @@ public class RemovePlanet implements BaseCommandWithSuggestion {
             if (leadsTo(h, planet)) addHyper(p, h, planet);
             else if (h.getDestinationVisualEntity() == planet && !p.hyperRemove.contains(h)) p.resetVisual.add(h);
         }
-        for (NascentGravityWellAPI w : hyper.getGravityWells()) {
-            if (w.getTarget() == planet) p.wells.add(w);
+        if (hyper.getGravityWells() != null) {
+            for (NascentGravityWellAPI w : hyper.getGravityWells()) {
+                if (w.getTarget() == planet) p.wells.add(w);
+            }
         }
 
-        // Everything orbiting the planet: attached terrain goes with it, anything else blocks.
-        List<String> orbiting = new ArrayList<>();
+        // Everything orbiting the planet: attached terrain and decorative debris go with it, anything else blocks.
+        Map<String, List<String>> orbiting = new LinkedHashMap<>();
         for (SectorEntityToken t : p.system.getAllEntities()) {
             if (t == planet || ownJumpPoints.contains(t)) continue;
             if (t instanceof CampaignFleetAPI) {
@@ -224,15 +237,24 @@ public class RemovePlanet implements BaseCommandWithSuggestion {
             }
             boolean attachedRing = ringParent(t) == planet;
             if (!attachedRing && t.getOrbitFocus() != planet) continue;
-            if (attachedRing || t instanceof CampaignTerrainAPI) {
+            if (t.hasTag(Tags.ORBITAL_JUNK)) {
+                p.junk.add(t);
+            } else if (attachedRing || t instanceof CampaignTerrainAPI) {
                 p.terrain.add(t);
             } else {
                 String kind = t instanceof PlanetAPI ? "moon" : (WsUtil.isStation(t) ? "station" : "object");
-                orbiting.add(kind + " " + describeThing(t) + " (ID " + t.getId() + ")");
+                String label = kind + " '" + describeThing(t) + "'";
+                if (!orbiting.containsKey(label)) orbiting.put(label, new ArrayList<String>());
+                orbiting.get(label).add(t.getId());
             }
         }
         if (!orbiting.isEmpty()) {
-            p.blockers.add("other things orbit it: " + String.join(", ", orbiting) + ".");
+            List<String> parts = new ArrayList<>();
+            for (Map.Entry<String, List<String>> en : orbiting.entrySet()) {
+                List<String> ids = en.getValue();
+                parts.add(ids.size() == 1 ? en.getKey() + " (ID " + ids.get(0) + ")" : ids.size() + "x " + en.getKey());
+            }
+            p.blockers.add("other things orbit it: " + String.join(", ", parts) + ".");
         }
         return p;
     }
@@ -240,7 +262,7 @@ public class RemovePlanet implements BaseCommandWithSuggestion {
     private static void addHyper(Plan p, JumpPointAPI h, SectorEntityToken removedTarget) {
         if (p.hyperRemove.contains(h) || p.hyperTrim.contains(h)) return;
         int others = 0;
-        for (JumpPointAPI.JumpDestination d : h.getDestinations()) {
+        for (JumpPointAPI.JumpDestination d : destinations(h)) {
             SectorEntityToken dest = d.getDestination();
             if (dest != removedTarget && dest != p.planet && !p.systemJumpPoints.contains(dest)) others++;
         }
@@ -258,14 +280,16 @@ public class RemovePlanet implements BaseCommandWithSuggestion {
             h.removeDestination(planet);
             for (SectorEntityToken j : p.systemJumpPoints) h.removeDestination(j);
         }
+        List<JumpPointAPI> autoJumpPoints = sys.getAutogeneratedJumpPointsInHyper(); // may be null
+        List<NascentGravityWellAPI> autoWells = sys.getAutogeneratedNascentWellsInHyper(); // may be null
         for (JumpPointAPI h : p.hyperRemove) {
             also.add("hyperspace jump point " + h.getName());
             hyper.removeEntity(h);
-            sys.getAutogeneratedJumpPointsInHyper().remove(h);
+            if (autoJumpPoints != null) autoJumpPoints.remove(h);
         }
         for (NascentGravityWellAPI w : p.wells) {
             hyper.removeEntity(w);
-            sys.getAutogeneratedNascentWellsInHyper().remove(w);
+            if (autoWells != null) autoWells.remove(w);
         }
         if (!p.wells.isEmpty()) also.add(p.wells.size() + " gravity well(s)");
         for (SectorEntityToken j : p.systemJumpPoints) {
@@ -276,6 +300,8 @@ public class RemovePlanet implements BaseCommandWithSuggestion {
             also.add(describeThing(t));
             sys.removeEntity(t);
         }
+        for (SectorEntityToken t : p.junk) sys.removeEntity(t);
+        if (!p.junk.isEmpty()) also.add(p.junk.size() + " pieces of orbital debris");
         for (JumpPointAPI j : p.unlinkRelated) j.setRelatedPlanet(null);
         for (JumpPointAPI h : p.resetVisual) {
             if (sys.getStar() != null) h.setStandardWormholeToStarOrPlanetVisual(sys.getStar());

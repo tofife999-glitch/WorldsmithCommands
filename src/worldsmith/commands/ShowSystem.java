@@ -11,6 +11,7 @@ import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.impl.campaign.procgen.ConditionGenDataSpec;
 import com.fs.starfarer.api.util.Misc;
 import org.json.JSONObject;
+import org.lwjgl.util.vector.Vector2f;
 import org.lazywizard.console.BaseCommandWithSuggestion;
 import org.lazywizard.console.CommandUtils;
 import org.lazywizard.console.CommonStrings;
@@ -101,14 +102,14 @@ public class ShowSystem implements BaseCommandWithSuggestion {
         for (SectorEntityToken e : system.getAllEntities()) {
             if (WsUtil.isStation(e)) all.add(e);
         }
-        final SectorEntityToken center = system.getCenter();
+        final Vector2f center = system.getCenter() != null ? system.getCenter().getLocation() : new Vector2f(0f, 0f);
         List<SectorEntityToken> roots = new ArrayList<>();
         for (SectorEntityToken e : all) {
             SectorEntityToken f = e.getOrbitFocus();
             if (f == null || !all.contains(f)) roots.add(e);
         }
-        roots.sort((x, y) -> Float.compare(Misc.getDistance(x.getLocation(), center.getLocation()),
-                Misc.getDistance(y.getLocation(), center.getLocation())));
+        roots.sort((x, y) -> Float.compare(Misc.getDistance(x.getLocation(), center),
+                Misc.getDistance(y.getLocation(), center)));
         List<SectorEntityToken> out = new ArrayList<>();
         for (SectorEntityToken r : roots) addWithChildren(r, 0, all, out, depth);
         return out;

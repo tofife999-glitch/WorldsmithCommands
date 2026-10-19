@@ -4,7 +4,7 @@ Quick console commands for shaping the Starsector sector: inspect star systems, 
 dialog from anywhere, found NPC colonies, cap colony size, terraform, rename, and add or remove
 planets.
 
-Version 1.0.0 for **Starsector 0.98a-RC8**. Utility mod: you can add it to or remove it from a
+Version 1.0.1 for **Starsector 0.98a-RC8**. Utility mod: you can add it to or remove it from a
 running save.
 
 **Download:** [latest release](https://github.com/tofife999-glitch/WorldsmithCommands/releases/latest).
@@ -143,17 +143,28 @@ terraform Corvus_IV water keep
 terraform jungle          (with the planet's dialog open)
 ```
 
-### rename <old name> > <new name>
-Renames a planet, moon, station or colony (the planet and its market). Without an old name
-(`rename > New Hope`) it renames the planet whose dialog is open.
+### rename <current name> <new name>
+Renames a planet, moon, station or colony (the planet and its market), or a whole star system.
+There are three ways to type it:
+
+| What you type | When to use it |
+|---|---|
+| `rename Corvus_IV New Hope` | The usual way: current name first (Tab completes it), then the new name. |
+| `rename Corvus IV > New Hope` | If you're unsure where the current name ends, put a `>` between the names. |
+| `rename New Hope` | With the planet's or station's dialog open: everything you type is the new name. |
+
+Without a `>`, the longest part at the start that is exactly the name (or ID) of a planet, station
+or system counts as the current name. Everything after it is the new name. The output always says
+what was renamed, so you can check it was understood correctly.
 
 Renaming a star system renames the system (keeping custom full names), its star, its jump points
 and their hyperspace ends, and generic names that start with the old system name ("Corvus IV"
 becomes "Nova IV") plus their markets. Everything that was renamed is printed.
 
 ```
+rename Corvus_IV New Hope
 rename Corvus IV > New Hope
-rename Corvus > Nova
+rename Corvus Nova
 ```
 
 ### addplanet [type|random] [name]
@@ -180,8 +191,9 @@ confirmation, naming the planet and its system.
 
 - Stars and colonies are refused. To remove a colony, first open its dialog (`visit <name>`), type
   `destroycolony`, then run `removeplanet` again.
-- It refuses planets that moons, stations or other objects orbit, and lists those things. Rings and
-  magnetic fields around the planet are removed with it.
+- It refuses planets that moons, stations or other objects orbit, and lists those things. Rings,
+  magnetic fields and decorative orbital debris (the small "Habitat" junk the game puts around
+  planets with ruins) are removed with it.
 - Jump points that orbit the planet are removed together with their hyperspace end. If both ends
   can't be found, it refuses. Gas giant gravity wells in hyperspace that lead to the planet are
   removed too.
