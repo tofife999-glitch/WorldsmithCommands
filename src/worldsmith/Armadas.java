@@ -11,6 +11,7 @@ import com.fs.starfarer.api.impl.campaign.fleets.FleetFactoryV3;
 import com.fs.starfarer.api.impl.campaign.fleets.FleetParamsV3;
 import com.fs.starfarer.api.impl.campaign.ids.Factions;
 import com.fs.starfarer.api.impl.campaign.ids.MemFlags;
+import com.fs.starfarer.api.impl.campaign.missions.hub.HubMissionWithTriggers;
 import com.fs.starfarer.api.impl.campaign.procgen.themes.RemnantSeededFleetManager;
 import com.fs.starfarer.api.util.Misc;
 import org.lwjgl.util.vector.Vector2f;
@@ -38,13 +39,19 @@ public final class Armadas {
 
     /**
      * Spawns the fleet; null if the faction can't build one (no ships it knows). {@code attackDays} is split
-     * between attacking the target and raiding the rest of the system.
+     * between attacking the target and raiding the rest of the system. {@code elite}: alpha-core captains (for
+     * automated ships), no damage mods and an S-mod per ship on average.
      */
     public static CampaignFleetAPI launch(FactionAPI faction, StarSystemAPI sys, MarketAPI target, float fp,
-                                         String fleetType, String name, float attackDays, Random random) {
+                                         String fleetType, String name, float attackDays, boolean elite, Random random) {
         FleetParamsV3 params = new FleetParamsV3(null, sys.getLocation(), faction.getId(), null, fleetType,
                 fp, 0f, 0f, 0f, 0f, 0f, 0f);
         params.random = random;
+        if (elite) {
+            params.aiCores = HubMissionWithTriggers.OfficerQuality.AI_ALPHA;
+            params.qualityOverride = 1f;
+            params.averageSMods = 1;
+        }
         CampaignFleetAPI fleet = FleetFactoryV3.createFleet(params);
         if (fleet == null || fleet.isEmpty()) return null;
         fleet.setName(name);

@@ -5,6 +5,7 @@ import com.fs.starfarer.api.campaign.FactionAPI;
 import com.fs.starfarer.api.campaign.StarSystemAPI;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.impl.campaign.ids.FleetTypes;
+import com.fs.starfarer.api.util.Misc;
 import org.lazywizard.console.BaseCommandWithSuggestion;
 import org.lazywizard.console.CommonStrings;
 import org.lazywizard.console.Console;
@@ -18,7 +19,8 @@ import java.util.Random;
 
 /**
  * Sends a faction's war fleet into a star system: it arrives at a jump point, attacks the biggest colony
- * there and raids the system for about two months, then withdraws. It only fights that faction's enemies.
+ * there and raids the system for about two months, then withdraws. If that faction isn't at war with the colony's
+ * owner, the armada alone is made hostile to them for the attack (no war is declared).
  */
 public class Armada implements BaseCommandWithSuggestion {
     private static final String USAGE = "armada <faction> [system] [small|medium|large]";
@@ -68,7 +70,7 @@ public class Armada implements BaseCommandWithSuggestion {
         MarketAPI target = Armadas.biggestColony(sys);
         String name = faction.getDisplayName() + " Armada";
         CampaignFleetAPI fleet = Armadas.launch(faction, sys, target, fleetPoints(size), FleetTypes.TASK_FORCE, name,
-                60f, new Random());
+                60f, false, new Random());
         if (fleet == null) {
             WsUtil.print("The game could not put together a fleet for " + faction.getDisplayName() + ".");
             return CommandResult.ERROR;
@@ -79,9 +81,10 @@ public class Armada implements BaseCommandWithSuggestion {
         if (target != null && target.getFaction() == faction) {
             goal = "guards its own colony " + target.getName() + " and patrols " + sys.getName();
         } else if (target != null && !faction.isHostileTo(target.getFaction())) {
+            // Hostile for this attack only, the way vanilla lets mission fleets turn on a faction: no war is declared.
+            Misc.makeHostileToFaction(fleet, target.getFactionId(), 90f);
             note = " " + faction.getDisplayNameWithArticle() + " is not at war with " + target.getFaction().getDisplayNameWithArticle()
-                    + ", so the armada only fights its enemies there (declare war first: totalwar, or Nexerelin's"
-                    + " creatediplomacyevent " + faction.getId() + " " + target.getFactionId() + " declare_war).";
+                    + "; only this armada is hostile to them, no war is declared.";
         }
         WsUtil.print("The " + name + " (" + fleet.getFleetData().getNumMembers() + " ships, " + size + ") jumped into "
                 + sys.getName() + " and " + goal + " for about two months, then withdraws." + note);

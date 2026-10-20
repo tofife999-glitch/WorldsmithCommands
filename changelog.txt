@@ -3,28 +3,33 @@ Worldsmith Commands - changelog
 1.1.0 (2026-10-20)
 - IMPORTANT: no longer a utility mod. It now ships 8 blank faction slots for spawnfaction, which become part
   of every save it runs in, so it can be added to a running save but not removed from one.
-- Removed npccolony, npcexpedition and addobject: Additional Console Commands does the same
-  (colonizeplanet, spawncolonyfleet, addentity).
+- Removed npccolony and npcexpedition: Additional Console Commands does the same (colonizeplanet,
+  spawncolonyfleet).
 - New faction commands: spawnfaction (a new faction with its own name, random player flag, ships and
   tactics copied from an existing faction, empty lore and 1-5 colonies, here or at a random place; set up
   in a popup; Nexerelin runs it like any other faction), factionflag (change any faction's flag),
-  factionlore (rewrite any faction's lore on its Intel page), rename faction.
-- New war commands: wars (who fights whom, alliances, war weariness), totalwar, totalpeace, factionranking,
-  armada (a faction's war fleet attacks a system for about two months), rebellion (in one colony), alliance
-  (list, dissolve or rename Nexerelin alliances).
-- New apocalypse command: remnant (Remnant armadas raid every inhabited system), bombard (every colony
+  factionlore (rewrite any faction's lore on its Intel page), rename faction, and for spawned factions
+  factionships (low/mid/high tech, pirate or another faction's ships), factiondoctrine (fleet style
+  presets) and factionpersonality (warlike, peaceful, pirate, expansionist...). factionflag without a
+  flag opens a picker that shows the flags as pictures.
+- New war commands: wars (who fights whom, alliances, war weariness), totalwar, totalpeace, armada (a
+  faction's war fleet attacks a system for about two months, even without a war), rebellion (in one
+  colony).
+- New apocalypse command: remnant (elite Remnant armadas raid every inhabited system), bombard (every colony
   saturation-bombed into ruins), revolution (rebellions in every colony). Your colonies are spared unless
   you add 'all'.
 - New star and space commands: addstar (binary/trinary systems), recolor (tint planets and stars),
   hyperclouds (clear or grow hyperspace clouds), addfield (asteroid or debris field; removeobject field
-  removes one). newsystem and changestar now also make black holes and neutron stars, with their event
-  horizon or pulsar beam; removeplanet removes companion stars.
+  removes one; fields may overlap anything), addjumppoint (two-way jump point where you are; removeobject
+  jumppoint removes it). newsystem also makes black holes and neutron stars, with their event horizon or
+  pulsar beam, and now gives every new system an inner and a fringe jump point; removeplanet removes
+  companion stars.
 - New planning commands: findplanet (search the sector with filters), planetinfo (everything about one
   planet), startypes (list all star types).
-- New building commands: addmoon, addring (asteroid belt, dust/ice ring, magnetic field), newsystem (empty
-  star system in hyperspace).
-- New editing commands: moveplanet, resizeplanet, changestar (optionally rerolls planet conditions).
-- New faction commands: factionpower (report, 'clear' ends Worldsmith effects), strengthenfaction and
+- New building commands: addmoon, addobject (stable location, relay, buoy, sensor array, inactive gate),
+  addring (asteroid belt, dust/ice ring, magnetic field), newsystem (empty star system in hyperspace).
+- New editing commands: moveplanet, resizeplanet.
+- Faction strength commands: factionpower (report, 'clear' ends Worldsmith effects), strengthenfaction and
   weakenfaction with levels 1-3. All faction effects are gradual and wear off by themselves; level 3 lasts
   up to 3 years.
 - New removal commands: removeobject, removering, removemoon (same as removeplanet).
@@ -32,8 +37,7 @@ Worldsmith Commands - changelog
   removing, new systems, stars, hyperspace, factions, new factions, war and the apocalypse.
 - newsystem asks whether to generate planets, moons, rings and stable locations or keep the system empty
   ('full' / 'empty' answer it in advance); the new star is named '<name> Prime'.
-- rename system <name> <new name> and rename star <name> <new name>.
-- changestar accepts the system or star name and the star type in any order, with clearer messages.
+- rename system <name> <new name>; stars follow their system's name.
 - resizeplanet accepts percentages (200% = twice as wide).
 - popcap now replaces a Worldsmith growth freeze on that colony.
 

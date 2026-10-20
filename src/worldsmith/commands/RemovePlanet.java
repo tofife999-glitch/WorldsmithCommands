@@ -186,7 +186,7 @@ public class RemovePlanet implements BaseCommandWithSuggestion {
         p.planet = planet;
         LocationAPI loc = planet.getContainingLocation();
         if (planet.isStar() && !companionStars().contains(planet)) {
-            p.blockers.add("it is the main star of its system; change its type with changestar instead.");
+            p.blockers.add("it is the main star of its system, which can't be removed.");
             return p;
         }
         if (!(loc instanceof StarSystemAPI) || !loc.getAllEntities().contains(planet)) {

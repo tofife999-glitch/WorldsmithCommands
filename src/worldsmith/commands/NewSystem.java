@@ -17,6 +17,7 @@ import org.lazywizard.console.BaseCommandWithSuggestion;
 import org.lazywizard.console.CommonStrings;
 import org.lazywizard.console.Console;
 import org.lwjgl.util.vector.Vector2f;
+import worldsmith.JumpPoints;
 import worldsmith.StarTerrain;
 import worldsmith.WsUtil;
 
@@ -225,8 +226,11 @@ public class NewSystem implements BaseCommandWithSuggestion {
             contents = planets + " planets and moons, plus rings and stable locations, all unsurveyed";
         }
 
+        // An inner and a fringe jump point like generated systems have; autogenerate then gives each its
+        // hyperspace end, plus the star's entrance and gravity wells at gas giants.
+        JumpPoints.addStandard(sys, random);
         sys.generateAnchorIfNeeded();
-        sys.autogenerateHyperspaceJumpPoints(true, true); // star entrance, gas giant wells and a fringe jump point
+        sys.autogenerateHyperspaceJumpPoints(true, false);
 
         // Clear the hyperspace clouds around it, as StarSystemGenerator does for new constellations.
         HyperspaceTerrainPlugin plugin = (HyperspaceTerrainPlugin) Misc.getHyperspaceTerrain().getPlugin();
@@ -238,7 +242,8 @@ public class NewSystem implements BaseCommandWithSuggestion {
 
         WsUtil.invalidateCache();
         return "Created star system " + sys.getName() + " with the star " + star.getName() + " (" + star.getSpec().getName()
-                + ") at your position in hyperspace: " + contents + ".";
+                + ") at your position in hyperspace: " + contents + ", and " + WsUtil.hyperJumpPointsInto(sys).size()
+                + " jump points from hyperspace.";
     }
 
     @Override

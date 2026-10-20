@@ -13,17 +13,15 @@ import com.fs.starfarer.api.util.Misc;
 import org.lazywizard.console.BaseCommandWithSuggestion;
 import org.lazywizard.console.CommonStrings;
 import org.lazywizard.console.Console;
-import worldsmith.OrbitCheck;
 import worldsmith.WsUtil;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 
 /**
  * Adds an asteroid field or a salvageable debris field at your position, orbiting the star, the way the sector
- * generator makes them. removeobject field removes one again.
+ * generator makes them. Fields may overlap anything. removeobject field removes one again.
  */
 public class AddField implements BaseCommandWithSuggestion {
     private static final String USAGE = "addfield <asteroids|debris> [small|large]";
@@ -63,12 +61,6 @@ public class AddField implements BaseCommandWithSuggestion {
         float radius = size.equals("small") ? 200f : size.equals("large") ? 450f : 250f + 150f * random.nextFloat();
         float distance = Misc.getDistance(fleet.getLocation(), focus.getLocation());
         float angle = Misc.getAngleInDegrees(focus.getLocation(), fleet.getLocation());
-        String overlap = OrbitCheck.check(sys, focus, distance, radius + 100f, new HashSet<SectorEntityToken>());
-        if (overlap != null) {
-            WsUtil.print("Can't place a " + Math.round(radius) + "-wide field here (distance " + Math.round(distance)
-                    + "): " + overlap + " Fly to an emptier spot and try again.");
-            return CommandResult.ERROR;
-        }
         float orbitDays = distance / (20f + random.nextFloat() * 5f);
         SectorEntityToken field;
         if (asteroids) {

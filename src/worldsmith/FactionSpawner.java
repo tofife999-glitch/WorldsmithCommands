@@ -241,6 +241,7 @@ public final class FactionSpawner {
         if (planets.isEmpty()) return "Did not create " + name + ": its planets were colonized in the meantime.";
 
         // Identity, ships and Nexerelin status.
+        FactionCharacter.clear(slot);
         FactionIdentity.setName(slot, name);
         slot.setShipNamePrefixOverride(FactionIdentity.shipPrefix(name));
         int flag = FactionIdentity.randomFlagIndex(random);
@@ -281,7 +282,7 @@ public final class FactionSpawner {
      * Starts out like the independents: friends with nobody, hostile to whoever the independents fight
      * (pirates, the Luddic Path...), neutral to you. Nexerelin's diplomacy takes it from there.
      */
-    private static void initRelations(FactionAPI f) {
+    public static void initRelations(FactionAPI f) {
         FactionAPI indie = Global.getSector().getFaction(Factions.INDEPENDENT);
         for (FactionAPI o : Global.getSector().getAllFactions()) {
             if (o == f) continue;

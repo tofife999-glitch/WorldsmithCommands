@@ -151,17 +151,25 @@ public final class FactionSlots {
         for (FactionAPI f : slots()) {
             boolean spawned = isSpawned(f);
             setPlayable(f, spawned);
-            if (!spawned) continue;
-            MemoryAPI mem = f.getMemoryWithoutUpdate();
-            String templateId = mem.getString(MEM_TEMPLATE);
-            FactionAPI template = templateId == null ? null : Global.getSector().getFaction(templateId);
-            if (template != null && isGoodTemplate(template)) {
-                try {
-                    copyTech(template, f);
-                } catch (Exception ex) {
-                    Global.getLogger(FactionSlots.class).warn("Worldsmith: could not refresh ships of " + f.getId(), ex);
-                }
+            if (!spawned) {
+                FactionCharacter.reset(f);
+                continue;
+            }
+            try {
+                FactionAPI template = template(f);
+                if (template != null) copyTech(template, f);
+                FactionCharacter.onGameLoad(f);
+            } catch (Exception ex) {
+                Global.getLogger(FactionSlots.class).warn("Worldsmith: could not refresh " + f.getId(), ex);
             }
         }
+    }
+
+    /** The faction whose ships and doctrine a spawned faction copies, or null. */
+    public static FactionAPI template(FactionAPI f) {
+        MemoryAPI mem = f.getMemoryWithoutUpdate();
+        String templateId = mem.getString(MEM_TEMPLATE);
+        FactionAPI template = templateId == null ? null : Global.getSector().getFaction(templateId);
+        return template != null && isGoodTemplate(template) ? template : null;
     }
 }

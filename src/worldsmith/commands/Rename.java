@@ -25,7 +25,7 @@ public class Rename implements BaseCommandWithSuggestion {
     private static final String USAGE = "rename <current name> <new name>";
 
     /** What the current name may refer to. */
-    private enum Mode { ANY, SYSTEM, STAR }
+    private enum Mode { ANY, SYSTEM }
 
     private static void printHowTo() {
         WsUtil.print("How to use rename:");
@@ -33,7 +33,6 @@ public class Rename implements BaseCommandWithSuggestion {
         WsUtil.printRaw("  rename <current name> > <new name>   e.g.  rename Glith I > Hakeball (use > if you're unsure)");
         WsUtil.printRaw("  rename <new name>                    with a planet's or station's dialog open");
         WsUtil.printRaw("  rename system <system> <new name>    renames a star system, plus its star and planets named after it");
-        WsUtil.printRaw("  rename star <star> <new name>        renames only that star");
         WsUtil.printRaw("  rename faction <faction> <new name>  renames a faction everywhere ('reset' gives back its own name)");
     }
 
@@ -103,18 +102,9 @@ public class Rename implements BaseCommandWithSuggestion {
         return s.trim().replace('_', ' ').replaceAll("\\s+", " ");
     }
 
-    private static List<SectorEntityToken> stars() {
-        List<SectorEntityToken> out = new ArrayList<>();
-        for (SectorEntityToken e : WsUtil.allBodies()) {
-            if (WsUtil.isStar(e)) out.add(e);
-        }
-        return out;
-    }
-
     private static boolean names(String oldName, Mode mode) {
         switch (mode) {
             case SYSTEM: return !WsUtil.exactSystems(oldName).isEmpty();
-            case STAR: return !WsUtil.exactMatches(oldName, stars()).isEmpty();
             default: return !WsUtil.exactMatches(oldName, WsUtil.allBodies()).isEmpty() || !WsUtil.exactSystems(oldName).isEmpty();
         }
     }
@@ -131,8 +121,8 @@ public class Rename implements BaseCommandWithSuggestion {
         if (words.size() >= 2 && words.get(0).equalsIgnoreCase("faction")) {
             return renameFaction(a.substring(words.get(0).length()).trim());
         }
-        if (words.size() >= 2 && (words.get(0).equalsIgnoreCase("system") || words.get(0).equalsIgnoreCase("star"))) {
-            mode = words.get(0).equalsIgnoreCase("system") ? Mode.SYSTEM : Mode.STAR;
+        if (words.size() >= 2 && words.get(0).equalsIgnoreCase("system")) {
+            mode = Mode.SYSTEM;
             a = a.substring(words.get(0).length()).trim();
         }
         if (a.isEmpty() || a.equals(">")) {
@@ -177,7 +167,7 @@ public class Rename implements BaseCommandWithSuggestion {
             WsUtil.print("Only one name was given" + (mode == Mode.ANY ? " and no planet dialog is open" : "")
                     + ", so I don't know what to rename.");
         } else {
-            String what = mode == Mode.SYSTEM ? "star system" : (mode == Mode.STAR ? "star" : "planet, station or system");
+            String what = mode == Mode.SYSTEM ? "star system" : "planet, station or system";
             WsUtil.print("The start of '" + a + "' isn't the name of any " + what + ".");
             printDidYouMean(parts.get(0));
         }
@@ -204,21 +194,6 @@ public class Rename implements BaseCommandWithSuggestion {
             }
             return CommandResult.ERROR;
         }
-        if (mode == Mode.STAR) {
-            List<SectorEntityToken> hits = WsUtil.exactMatches(oldName, stars());
-            if (hits.size() == 1) {
-                renameBody(hits.get(0), newName);
-                return CommandResult.SUCCESS;
-            }
-            if (hits.isEmpty()) {
-                printDidYouMean(oldName);
-            } else {
-                WsUtil.print(hits.size() + " stars are called '" + oldName + "'. Use the ID:");
-                for (SectorEntityToken b : hits) WsUtil.printRaw("  - " + WsUtil.describe(b));
-            }
-            return CommandResult.ERROR;
-        }
-
         List<SectorEntityToken> bodies = WsUtil.exactMatches(oldName, WsUtil.allBodies());
         List<StarSystemAPI> systems = WsUtil.exactSystems(oldName);
 
@@ -284,6 +259,12 @@ public class Rename implements BaseCommandWithSuggestion {
     }
 
     private static void renameBody(SectorEntityToken e, String newName) {
+        if (WsUtil.isStar(e)) {
+            // The game shows a star under its system's name, so renaming the star alone doesn't show.
+            WsUtil.print(e.getName() + " is a star; stars follow their system's name. Rename the system instead:"
+                    + " rename system " + WsUtil.token(WsUtil.systemName(e)) + " <new name>");
+            return;
+        }
         String old = e.getName();
         e.setName(newName);
         MarketAPI m = e.getMarket();
@@ -296,7 +277,6 @@ public class Rename implements BaseCommandWithSuggestion {
                 if (!WsUtil.leadsTo(jp, e)) continue;
                 String n = null;
                 if (p.isGasGiant()) n = newName + " Gravity Well";
-                else if (p.isStar()) n = newName + ", " + p.getSpec().getName();
                 if (n != null && !n.equals(jp.getName())) {
                     extra.add("hyperspace jump point '" + jp.getName() + "' -> '" + n + "'");
                     jp.setName(n);
@@ -392,13 +372,12 @@ public class Rename implements BaseCommandWithSuggestion {
     public List<String> getSuggestions(int parameter, List<String> previous, CommandContext context) {
         // Only the current name is completed; the new name is free text.
         boolean factionMode = !previous.isEmpty() && previous.get(0).equalsIgnoreCase("faction");
-        boolean keyword = !previous.isEmpty() && (factionMode
-                || previous.get(0).equalsIgnoreCase("system") || previous.get(0).equalsIgnoreCase("star"));
+        boolean keyword = !previous.isEmpty() && (factionMode || previous.get(0).equalsIgnoreCase("system"));
         if (parameter > 1 || (parameter == 1 && !keyword)) return new ArrayList<>();
         if (factionMode) return WsUtil.factionSuggestions();
         List<String> l = WsUtil.bodySuggestions(WsUtil.Kind.ANY);
         l.addAll(WsUtil.systemSuggestions());
-        if (parameter == 0) l.addAll(WsUtil.list("system", "star", "faction"));
+        if (parameter == 0) l.addAll(WsUtil.list("system", "faction"));
         return l;
     }
 }

@@ -535,7 +535,7 @@ public final class WsUtil {
         return (StarGenDataSpec) Global.getSettings().getSpec(StarGenDataSpec.class, type, true);
     }
 
-    /** Star types that newsystem, changestar and addstar can use: every star type the sector generator can roll. */
+    /** Star types that newsystem and addstar can use: every star type the sector generator can roll. */
     public static boolean isUsableStarType(PlanetSpecAPI s) {
         return s != null && (s.isStar() || s.isBlackHole()) && starData(s.getPlanetType()) != null;
     }

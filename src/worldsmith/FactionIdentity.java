@@ -130,7 +130,7 @@ public final class FactionIdentity {
         f.setFactionCrestOverride(null);
     }
 
-    private static void loadTexture(String path) {
+    public static void loadTexture(String path) {
         if (path == null || !LOADED_TEXTURES.add(path)) return;
         try {
             Global.getSettings().loadTexture(path);

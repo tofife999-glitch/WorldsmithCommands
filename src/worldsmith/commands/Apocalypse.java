@@ -35,9 +35,9 @@ import java.util.Random;
  */
 public class Apocalypse implements BaseCommandWithSuggestion {
     private static final String USAGE = "apocalypse <remnant|bombard|revolution> [all] [yes]";
-    /** Upper limit for one armada; more systems than LOTS_OF_SYSTEMS make every armada smaller. */
-    private static final float MAX_FP = 300f;
-    private static final int LOTS_OF_SYSTEMS = 60;
+    /** Upper limit for one armada, and for all armadas together (more systems make each one smaller). */
+    private static final float MAX_FP = 600f;
+    private static final float TOTAL_FP = 25000f;
 
     private enum Kind { REMNANT, BOMBARD, REVOLUTION }
 
@@ -164,24 +164,32 @@ public class Apocalypse implements BaseCommandWithSuggestion {
     private static String remnant(List<MarketAPI> targets) {
         Random random = new Random();
         Map<StarSystemAPI, List<MarketAPI>> systems = bySystem(targets);
-        float mult = systems.size() > LOTS_OF_SYSTEMS ? Math.max(0.4f, LOTS_OF_SYSTEMS / (float) systems.size()) : 1f;
+        Map<StarSystemAPI, Float> want = new LinkedHashMap<>();
+        float total = 0f;
+        for (Map.Entry<StarSystemAPI, List<MarketAPI>> e : systems.entrySet()) {
+            int sizes = 0;
+            for (MarketAPI m : e.getValue()) sizes += m.getSize();
+            float fp = Math.min(MAX_FP, 150f + 30f * sizes);
+            want.put(e.getKey(), fp);
+            total += fp;
+        }
+        // Keeps a huge sector from spawning more ships than the game handles well.
+        float mult = total > TOTAL_FP ? TOTAL_FP / total : 1f;
         int fleets = 0;
         int ships = 0;
         for (Map.Entry<StarSystemAPI, List<MarketAPI>> e : systems.entrySet()) {
             MarketAPI biggest = null;
-            int sizes = 0;
             for (MarketAPI m : e.getValue()) {
-                sizes += m.getSize();
                 if (biggest == null || m.getSize() > biggest.getSize()) biggest = m;
             }
             CampaignFleetAPI fleet = Armadas.launch(Global.getSector().getFaction(Factions.REMNANTS), e.getKey(), biggest,
-                    Math.min(MAX_FP, 90f + 18f * sizes) * mult, FleetTypes.PATROL_LARGE, "Remnant Armada", 60f, random);
+                    want.get(e.getKey()) * mult, FleetTypes.PATROL_LARGE, "Remnant Armada", 60f, true, random);
             if (fleet == null) continue;
             fleets++;
             ships += fleet.getFleetData().getNumMembers();
         }
-        return "Remnant armadas attack " + fleets + " inhabited systems (" + ships + " ships in total). They raid for"
-                + " about two months, then withdraw and vanish.";
+        return "Elite Remnant armadas (alpha-core captains, no damage mods) attack " + fleets + " inhabited systems ("
+                + ships + " ships in total). They raid for about two months, then withdraw and vanish.";
     }
 
     // ------------------------------------------------------------------ bombard

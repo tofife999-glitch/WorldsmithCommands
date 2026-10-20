@@ -9,6 +9,7 @@ import com.fs.starfarer.api.campaign.RingBandAPI;
 import com.fs.starfarer.api.campaign.SectorEntityToken;
 import com.fs.starfarer.api.campaign.StarSystemAPI;
 import com.fs.starfarer.api.impl.campaign.terrain.BaseRingTerrain;
+import com.fs.starfarer.api.impl.campaign.terrain.PulsarBeamTerrainPlugin;
 import com.fs.starfarer.api.util.Misc;
 
 import java.util.ArrayList;
@@ -25,8 +26,14 @@ public final class OrbitCheck {
     private OrbitCheck() {
     }
 
-    /** For ring-shaped things (ring/belt/corona terrain, ring band visuals): {focus, inner, outer}; else null. */
+    /**
+     * For ring-shaped things (ring/belt/corona terrain, ring band visuals): {focus, inner, outer}; else null.
+     * A neutron star's pulsar beam isn't an orbit (it sweeps the whole system), so it doesn't count.
+     */
     public static Object[] ring(SectorEntityToken e) {
+        if (e instanceof CampaignTerrainAPI && ((CampaignTerrainAPI) e).getPlugin() instanceof PulsarBeamTerrainPlugin) {
+            return null;
+        }
         if (e instanceof CampaignTerrainAPI && ((CampaignTerrainAPI) e).getPlugin() instanceof BaseRingTerrain) {
             BaseRingTerrain.RingParams rp = ((BaseRingTerrain) ((CampaignTerrainAPI) e).getPlugin()).getRingParams();
             if (rp == null) return null;
