@@ -48,8 +48,12 @@ public class WsHelp implements BaseCommandWithSuggestion {
                         + "  sensor_array      gives better sensor range in the system\n"
                         + "  ..._makeshift     weaker player-built versions of the three above\n"
                         + "  inactive_gate     a gate of the gate network\n"
-                        + "Short names work too: stable, relay, buoy, sensor, gate. Without a name it removes the\n"
-                        + "nearest one in your system. To add objects, use Additional Console Commands' addentity.");
+                        + "  asteroid_field    an asteroid field (with its asteroids)\n"
+                        + "  debris_field      a debris field you can salvage\n"
+                        + "Short names work too: stable, relay, buoy, sensor, gate, field. Without a name it removes\n"
+                        + "the nearest one in your system.\n"
+                        + "addfield <asteroids|debris> [small|large] adds a field at your position. To add the other\n"
+                        + "objects, use Additional Console Commands' addentity.");
         TOPICS.put("addring",
                 "addring [planet] <belt|dust|ice|magfield> adds terrain that works like vanilla's:\n"
                         + "  belt       an asteroid belt with asteroids\n"
@@ -147,6 +151,11 @@ public class WsHelp implements BaseCommandWithSuggestion {
                         + "totalwar [withplayer]: every faction with colonies at war with every other; alliances\n"
                         + "  break up. You stay out unless 'withplayer' (a commission ties you to your employer).\n"
                         + "totalpeace [all] [withplayer]: everyone at peace; pirates only with 'all'.\n"
+                        + "factionranking [size|colonies|industry|military|wars|invasion]: who is strongest.\n"
+                        + "armada <faction> [system] [small|medium|large]: that faction's war fleet attacks the\n"
+                        + "  system's biggest colony for about two months, then leaves. It only fights its enemies.\n"
+                        + "rebellion [colony] [backing faction]: a Nexerelin rebellion in one colony.\n"
+                        + "alliance list | dissolve <alliance or member> | rename <alliance or member> > <name>\n"
                         + "Already in other mods, for one pair of factions:\n"
                         + "  setrelation / adjustrelation <faction> [other] <amount>   (Console Commands)\n"
                         + "  creatediplomacyevent <a> <b> declare_war|peace_treaty|ceasefire   (Nexerelin)\n"
@@ -190,7 +199,8 @@ public class WsHelp implements BaseCommandWithSuggestion {
         if (TOPICS.containsKey(a)) return a;
         switch (a) {
             case "filters": case "filter": case "search": return "findplanet";
-            case "object": case "removeobject": case "addobject": case "addentity": return "objects";
+            case "object": case "removeobject": case "addobject": case "addentity": case "addfield": case "fields":
+            case "field": return "objects";
             case "rings": case "ring": case "belt": return "addring";
             case "resizeplanet": case "size": case "sizes": return "resize";
             case "removeplanet": case "removering": case "removemoon": case "removing": return "remove";
@@ -200,7 +210,8 @@ public class WsHelp implements BaseCommandWithSuggestion {
             case "faction": case "factionpower": case "weakenfaction": case "strengthenfaction": return "factions";
             case "spawnfaction": case "factionflag": case "factionlore": case "flag": case "flags": case "lore":
                 return "newfaction";
-            case "wars": case "totalwar": case "totalpeace": case "peace": case "diplomacy": return "war";
+            case "wars": case "totalwar": case "totalpeace": case "peace": case "diplomacy": case "armada":
+            case "rebellion": case "alliance": case "alliances": case "factionranking": case "ranking": return "war";
             case "remnant": case "bombard": case "revolution": return "apocalypse";
             default: return null;
         }

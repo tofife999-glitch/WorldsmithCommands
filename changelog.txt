@@ -9,13 +9,16 @@ Worldsmith Commands - changelog
   tactics copied from an existing faction, empty lore and 1-5 colonies, here or at a random place; set up
   in a popup; Nexerelin runs it like any other faction), factionflag (change any faction's flag),
   factionlore (rewrite any faction's lore on its Intel page), rename faction.
-- New war commands: wars (who fights whom, alliances, war weariness), totalwar, totalpeace.
+- New war commands: wars (who fights whom, alliances, war weariness), totalwar, totalpeace, factionranking,
+  armada (a faction's war fleet attacks a system for about two months), rebellion (in one colony), alliance
+  (list, dissolve or rename Nexerelin alliances).
 - New apocalypse command: remnant (Remnant armadas raid every inhabited system), bombard (every colony
   saturation-bombed into ruins), revolution (rebellions in every colony). Your colonies are spared unless
   you add 'all'.
 - New star and space commands: addstar (binary/trinary systems), recolor (tint planets and stars),
-  hyperclouds (clear or grow hyperspace clouds). newsystem and changestar now also make black holes and
-  neutron stars, with their event horizon or pulsar beam; removeplanet removes companion stars.
+  hyperclouds (clear or grow hyperspace clouds), addfield (asteroid or debris field; removeobject field
+  removes one). newsystem and changestar now also make black holes and neutron stars, with their event
+  horizon or pulsar beam; removeplanet removes companion stars.
 - New planning commands: findplanet (search the sector with filters), planetinfo (everything about one
   planet), startypes (list all star types).
 - New building commands: addmoon, addring (asteroid belt, dust/ice ring, magnetic field), newsystem (empty

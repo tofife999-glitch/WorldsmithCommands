@@ -20,6 +20,7 @@ Type `help worldsmith` in the console for the command list, and `wshelp` for exp
 - `addplanet [type] [name]` / `addmoon <planet> [type] [name]`: add a planet or moon
 - `addring [planet] <type>`: add an asteroid belt, ring or magnetic field
 - `addstar [type] [name]`: add a second or third star to a system
+- `addfield <asteroids|debris> [small|large]`: add an asteroid field or a salvageable debris field
 - `newsystem <name> [star type] [full|empty]`: create a star system in hyperspace
 - `moveplanet <planet>` / `resizeplanet [planet] <size>`: move a planet to your orbit, or resize it
 - `changestar [system] <star type> [reroll]`: change a system's star
@@ -34,6 +35,10 @@ Type `help worldsmith` in the console for the command list, and `wshelp` for exp
 - `factionflag <faction> [flag]` / `factionlore <faction> <text>`: change any faction's flag or lore
 - `factionpower`, `strengthenfaction`, `weakenfaction`: faction strength (see below)
 - `wars [faction]`: who is at war with whom
+- `factionranking [order]`: rank the factions by size, industry, military, wars or invasion points
+- `armada <faction> [system] [small|medium|large]`: send a faction's war fleet to attack a system
+- `rebellion [colony] [faction]`: start a Nexerelin rebellion in one colony
+- `alliance list|dissolve|rename`: list, dissolve or rename Nexerelin alliances
 - `totalwar` / `totalpeace`: everyone at war, or everyone at peace
 - `apocalypse <remnant|bombard|revolution>`: end the world (see below)
 - `wshelp [topic]`: explanations in the game
@@ -83,7 +88,7 @@ event horizon) and neutron stars (with a pulsar beam). `addstar` makes a binary 
 - `removeplanet` and `removemoon` delete uninhabited planets or moons.
 - `removering` removes the belt, ring or field nearest to you around the star, or all rings of a
   named planet.
-- `removeobject` removes the nearest object (or one of a type, or a named one).
+- `removeobject` removes the nearest object or field (or one of a type, or a named one).
 - Removing planets, moons and objects asks first.
 
 **New systems.** In hyperspace, `newsystem <name>` creates a system at your position. A popup asks
@@ -114,7 +119,9 @@ random empty place) and how big (1, 3 or 5 colonies), then shows the planets bef
 
 **War and peace.** `totalwar` puts every faction with colonies at war with every other one and breaks
 up all alliances; `totalpeace` makes peace (pirates only with `all`). You stay out of both unless you
-add `withplayer`. Nexerelin's diplomacy carries on from there.
+add `withplayer`. Nexerelin's diplomacy carries on from there. `armada hegemony Askonia` sends a
+war fleet that attacks for about two months and only fights its own enemies, so declare war first if
+needed.
 
 **Apocalypse** (asks first; your own colonies are spared unless you add `all`):
 

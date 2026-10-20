@@ -3,10 +3,13 @@ package worldsmith.commands;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.Script;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
+import com.fs.starfarer.api.campaign.CampaignTerrainAPI;
 import com.fs.starfarer.api.campaign.LocationAPI;
 import com.fs.starfarer.api.campaign.SectorEntityToken;
 import com.fs.starfarer.api.campaign.StarSystemAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Entities;
+import com.fs.starfarer.api.impl.campaign.ids.Terrain;
+import com.fs.starfarer.api.impl.campaign.terrain.AsteroidSource;
 import com.fs.starfarer.api.util.Misc;
 import org.lazywizard.console.BaseCommandWithSuggestion;
 import org.lazywizard.console.CommonStrings;
@@ -20,12 +23,17 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Removes a stable location, comm relay, nav buoy, sensor array (normal or makeshift) or inactive gate,
- * whether generated with the sector or added later (e.g. by Additional Console Commands' AddEntity). Always asks first.
+ * Removes a stable location, comm relay, nav buoy, sensor array (normal or makeshift), inactive gate, asteroid
+ * field or debris field, whether generated with the sector or added later (e.g. by Additional Console Commands'
+ * AddEntity, or addfield). Always asks first.
  */
 public class RemoveObject implements BaseCommandWithSuggestion {
-    private static final String USAGE = "removeobject [type|name]   (types: stable, relay, buoy, sensor, gate)";
+    private static final String USAGE = "removeobject [type|name]   (types: stable, relay, buoy, sensor, gate, field)";
     private static final Map<String, String> TYPES = new LinkedHashMap<>();
+    /** Fields are terrain, not custom entities: type key -> terrain type. */
+    private static final Map<String, String> FIELDS = new LinkedHashMap<>();
+    /** Type key meaning "an asteroid field or a debris field". */
+    private static final String ANY_FIELD = "field";
 
     static {
         TYPES.put("stable_location", Entities.STABLE_LOCATION);
@@ -36,12 +44,17 @@ public class RemoveObject implements BaseCommandWithSuggestion {
         TYPES.put("nav_buoy_makeshift", Entities.NAV_BUOY_MAKESHIFT);
         TYPES.put("sensor_array_makeshift", Entities.SENSOR_ARRAY_MAKESHIFT);
         TYPES.put("inactive_gate", Entities.INACTIVE_GATE);
+        FIELDS.put("asteroid_field", Terrain.ASTEROID_FIELD);
+        FIELDS.put("debris_field", Terrain.DEBRIS_FIELD);
     }
 
     private static String resolve(String raw) {
         String t = raw.toLowerCase(Locale.ROOT).replace(' ', '_');
-        if (TYPES.containsKey(t)) return t;
+        if (TYPES.containsKey(t) || FIELDS.containsKey(t)) return t;
         switch (t) {
+            case "field": case "fields": return ANY_FIELD;
+            case "asteroids": case "asteroidfield": return "asteroid_field";
+            case "debris": case "debrisfield": return "debris_field";
             case "stable": case "stablelocation": return "stable_location";
             case "relay": return "comm_relay";
             case "buoy": return "nav_buoy";
@@ -54,15 +67,27 @@ public class RemoveObject implements BaseCommandWithSuggestion {
         }
     }
 
+    private static String fieldType(SectorEntityToken e) {
+        return e instanceof CampaignTerrainAPI && FIELDS.containsValue(((CampaignTerrainAPI) e).getType())
+                ? ((CampaignTerrainAPI) e).getType() : null;
+    }
+
     private static boolean removable(SectorEntityToken e) {
-        return e.getCustomEntityType() != null && TYPES.containsValue(e.getCustomEntityType());
+        return (e.getCustomEntityType() != null && TYPES.containsValue(e.getCustomEntityType())) || fieldType(e) != null;
     }
 
     private static String typeKey(SectorEntityToken e) {
-        for (Map.Entry<String, String> t : TYPES.entrySet()) {
-            if (t.getValue().equals(e.getCustomEntityType())) return t.getKey();
+        String field = fieldType(e);
+        Map<String, String> map = field != null ? FIELDS : TYPES;
+        String value = field != null ? field : e.getCustomEntityType();
+        for (Map.Entry<String, String> t : map.entrySet()) {
+            if (t.getValue().equals(value)) return t.getKey();
         }
-        return e.getCustomEntityType();
+        return value;
+    }
+
+    private static boolean ofType(SectorEntityToken e, String key) {
+        return key == null || (ANY_FIELD.equals(key) ? fieldType(e) != null : key.equals(typeKey(e)));
     }
 
     private static List<SectorEntityToken> allObjects() {
@@ -94,8 +119,7 @@ public class RemoveObject implements BaseCommandWithSuggestion {
             // Nearest object (of that type) in the system you are in.
             float best = Float.MAX_VALUE;
             for (SectorEntityToken e : here.getAllEntities()) {
-                if (!removable(e)) continue;
-                if (typeKey != null && !TYPES.get(typeKey).equals(e.getCustomEntityType())) continue;
+                if (!removable(e) || !ofType(e, typeKey)) continue;
                 float d = Misc.getDistance(fleet.getLocation(), e.getLocation());
                 if (d < best) {
                     best = d;
@@ -116,7 +140,7 @@ public class RemoveObject implements BaseCommandWithSuggestion {
                 return CommandResult.ERROR;
             }
             if (hits.isEmpty()) {
-                WsUtil.print("No stable location, relay, buoy, sensor array or gate called '" + query + "'. Usage: " + USAGE);
+                WsUtil.print("No stable location, relay, buoy, sensor array, gate or field called '" + query + "'. Usage: " + USAGE);
                 return CommandResult.ERROR;
             }
             target = hits.get(0);
@@ -153,16 +177,30 @@ public class RemoveObject implements BaseCommandWithSuggestion {
         LocationAPI loc = entity.getContainingLocation();
         if (loc == null || !loc.getAllEntities().contains(entity)) return entity.getName() + " was already removed.";
         String where = WsUtil.systemName(entity);
+        int asteroids = 0;
+        if (Terrain.ASTEROID_FIELD.equals(fieldType(entity))) {
+            // An asteroid field's asteroids are separate entities that belong to it.
+            Object plugin = ((CampaignTerrainAPI) entity).getPlugin();
+            for (SectorEntityToken a : new ArrayList<>(loc.getAsteroids())) {
+                AsteroidSource src = Misc.getAsteroidSource(a);
+                if (src != null && src == plugin) {
+                    loc.removeEntity(a);
+                    asteroids++;
+                }
+            }
+        }
         loc.removeEntity(entity);
         WsUtil.invalidateCache();
-        return "Removed " + entity.getName() + " (" + typeKey(entity) + ") from " + where + ".";
+        return "Removed " + entity.getName() + " (" + typeKey(entity) + (asteroids > 0 ? ", " + asteroids + " asteroids" : "")
+                + ") from " + where + ".";
     }
 
     @Override
     public List<String> getSuggestions(int parameter, List<String> previous, CommandContext context) {
         if (parameter == 0) {
             List<String> l = new ArrayList<>(TYPES.keySet());
-            l.addAll(WsUtil.list("stable", "relay", "buoy", "sensor", "gate"));
+            l.addAll(FIELDS.keySet());
+            l.addAll(WsUtil.list("stable", "relay", "buoy", "sensor", "gate", "field"));
             return l;
         }
         return WsUtil.list("yes");

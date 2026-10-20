@@ -4,18 +4,12 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.Script;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.campaign.CampaignUIAPI;
-import com.fs.starfarer.api.campaign.FleetAssignment;
-import com.fs.starfarer.api.campaign.SectorEntityToken;
 import com.fs.starfarer.api.campaign.StarSystemAPI;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
-import com.fs.starfarer.api.impl.campaign.fleets.FleetFactoryV3;
-import com.fs.starfarer.api.impl.campaign.fleets.FleetParamsV3;
 import com.fs.starfarer.api.impl.campaign.ids.Conditions;
 import com.fs.starfarer.api.impl.campaign.ids.Factions;
 import com.fs.starfarer.api.impl.campaign.ids.FleetTypes;
-import com.fs.starfarer.api.impl.campaign.ids.MemFlags;
 import com.fs.starfarer.api.impl.campaign.intel.deciv.DecivTracker;
-import com.fs.starfarer.api.impl.campaign.procgen.themes.RemnantSeededFleetManager;
 import com.fs.starfarer.api.util.Misc;
 import exerelin.campaign.intel.rebellion.RebellionCreator;
 import exerelin.campaign.intel.rebellion.RebellionIntel;
@@ -23,7 +17,7 @@ import exerelin.utilities.NexConfig;
 import org.lazywizard.console.BaseCommandWithSuggestion;
 import org.lazywizard.console.CommonStrings;
 import org.lazywizard.console.Console;
-import org.lwjgl.util.vector.Vector2f;
+import worldsmith.Armadas;
 import worldsmith.WsUtil;
 
 import java.util.ArrayList;
@@ -180,36 +174,14 @@ public class Apocalypse implements BaseCommandWithSuggestion {
                 sizes += m.getSize();
                 if (biggest == null || m.getSize() > biggest.getSize()) biggest = m;
             }
-            CampaignFleetAPI fleet = armada(e.getKey(), biggest, Math.min(MAX_FP, 90f + 18f * sizes) * mult, random);
+            CampaignFleetAPI fleet = Armadas.launch(Global.getSector().getFaction(Factions.REMNANTS), e.getKey(), biggest,
+                    Math.min(MAX_FP, 90f + 18f * sizes) * mult, FleetTypes.PATROL_LARGE, "Remnant Armada", 60f, random);
             if (fleet == null) continue;
             fleets++;
             ships += fleet.getFleetData().getNumMembers();
         }
         return "Remnant armadas attack " + fleets + " inhabited systems (" + ships + " ships in total). They raid for"
                 + " about two months, then withdraw and vanish.";
-    }
-
-    /** A Remnant fleet set up like vanilla's own Remnant fleets, with plain vanilla orders. */
-    private static CampaignFleetAPI armada(StarSystemAPI sys, MarketAPI target, float fp, Random random) {
-        FleetParamsV3 params = new FleetParamsV3(null, sys.getLocation(), Factions.REMNANTS, null,
-                FleetTypes.PATROL_LARGE, fp, 0f, 0f, 0f, 0f, 0f, 0f);
-        params.random = random;
-        CampaignFleetAPI fleet = FleetFactoryV3.createFleet(params);
-        if (fleet == null || fleet.isEmpty()) return null;
-        fleet.setName("Remnant Armada");
-        sys.addEntity(fleet);
-        // Arrives at one of the system's jump points, as if it had come out of hyperspace.
-        List<SectorEntityToken> jumpPoints = sys.getJumpPoints();
-        SectorEntityToken entry = jumpPoints.isEmpty() ? null : jumpPoints.get(random.nextInt(jumpPoints.size()));
-        Vector2f at = entry != null ? entry.getLocation() : Misc.getPointAtRadius(sys.getCenter().getLocation(), 4000f, random);
-        fleet.setLocation(at.x, at.y);
-        RemnantSeededFleetManager.initRemnantFleetProperties(random, fleet, false);
-        fleet.getMemoryWithoutUpdate().set(MemFlags.MEMORY_KEY_MAKE_AGGRESSIVE, true);
-        fleet.addAssignment(FleetAssignment.ATTACK_LOCATION, target.getPrimaryEntity(), 30f, "attacking " + target.getName());
-        fleet.addAssignment(FleetAssignment.RAID_SYSTEM, sys.getCenter(), 30f, "raiding " + sys.getBaseName());
-        fleet.addAssignment(FleetAssignment.GO_TO_LOCATION_AND_DESPAWN, entry != null ? entry : sys.getCenter(), 60f,
-                "withdrawing");
-        return fleet;
     }
 
     // ------------------------------------------------------------------ bombard
