@@ -11,7 +11,6 @@ import com.fs.starfarer.api.impl.campaign.procgen.StarGenDataSpec;
 import com.fs.starfarer.api.impl.campaign.terrain.StarCoronaTerrainPlugin;
 import com.fs.starfarer.api.util.Misc;
 import org.lazywizard.console.BaseCommandWithSuggestion;
-import org.lazywizard.console.CommandUtils;
 import org.lazywizard.console.CommonStrings;
 import org.lazywizard.console.Console;
 import worldsmith.OrbitCheck;
@@ -40,8 +39,23 @@ public class ChangeStar implements BaseCommandWithSuggestion {
             WsUtil.print("Usage: " + USAGE + "   ('startypes' lists star types)");
             return CommandResult.BAD_SYNTAX;
         }
-        PlanetSpecAPI spec = WsUtil.findStarType(parts.remove(parts.size() - 1));
-        if (spec == null) return CommandResult.ERROR;
+        // The star type may come last or first; the rest names the system (or one of its stars).
+        PlanetSpecAPI spec = WsUtil.quietStarType(parts.get(parts.size() - 1));
+        if (spec != null) {
+            parts.remove(parts.size() - 1);
+        } else {
+            spec = WsUtil.quietStarType(parts.get(0));
+            if (spec != null) parts.remove(0);
+        }
+        if (spec == null) {
+            if (parts.size() == 1) {
+                WsUtil.findStarType(parts.get(0)); // explains special stars or suggests similar types
+            } else {
+                WsUtil.print("No star type found at the start or end of '" + args.trim() + "'.");
+            }
+            WsUtil.printRaw("Usage: " + USAGE + "   e.g. changestar Corvus star_red_giant  ('startypes' lists the types)");
+            return CommandResult.BAD_SYNTAX;
+        }
 
         StarSystemAPI sys;
         if (parts.isEmpty()) {
@@ -51,13 +65,8 @@ public class ChangeStar implements BaseCommandWithSuggestion {
                 return CommandResult.BAD_SYNTAX;
             }
         } else {
-            String q = WsUtil.join(parts, 0, parts.size());
-            List<StarSystemAPI> exact = WsUtil.exactSystems(q);
-            sys = exact.size() == 1 ? exact.get(0) : CommandUtils.findBestSystemMatch(q.replace('_', ' '));
-            if (sys == null) {
-                WsUtil.print("No star system found matching '" + q + "'.");
-                return CommandResult.ERROR;
-            }
+            sys = WsUtil.findSystemOrStar(WsUtil.join(parts, 0, parts.size()));
+            if (sys == null) return CommandResult.ERROR;
         }
         PlanetAPI star = sys.getStar();
         if (star == null) {

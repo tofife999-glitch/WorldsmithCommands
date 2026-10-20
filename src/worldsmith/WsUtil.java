@@ -581,6 +581,48 @@ public final class WsUtil {
         return null;
     }
 
+    /** Exact usable star type match (ID or name) without printing anything; null if the word isn't one. */
+    public static PlanetSpecAPI quietStarType(String token) {
+        String n = norm(token);
+        for (PlanetSpecAPI s : starTypes()) {
+            if (!isUsableStarType(s)) continue;
+            if (s.getPlanetType().equalsIgnoreCase(token) || norm(s.getName()).equals(n)
+                    || norm(s.getPlanetType()).equals("star " + n)) return s;
+        }
+        return null;
+    }
+
+    /**
+     * Finds a star system by base name, full name or ID, or by the name of one of its stars, then fuzzily like
+     * the 'jump' command. Prints what was searched and suggestions if nothing fits.
+     */
+    public static StarSystemAPI findSystemOrStar(String query) {
+        List<StarSystemAPI> exact = exactSystems(query);
+        if (exact.size() == 1) return exact.get(0);
+        if (exact.size() > 1) {
+            print(exact.size() + " systems match '" + query + "'. Use the system ID:");
+            for (StarSystemAPI s : exact) printRaw("  - " + s.getName() + " (ID " + s.getId() + ")");
+            return null;
+        }
+        List<SectorEntityToken> stars = new ArrayList<>();
+        for (SectorEntityToken e : allBodies()) {
+            if (isStar(e)) stars.add(e);
+        }
+        List<SectorEntityToken> starHits = exactMatches(query, stars);
+        if (starHits.size() == 1 && starHits.get(0).getContainingLocation() instanceof StarSystemAPI)
+            return (StarSystemAPI) starHits.get(0).getContainingLocation();
+        StarSystemAPI fuzzy = CommandUtils.findBestSystemMatch(query.replace('_', ' '));
+        if (fuzzy != null) return fuzzy;
+        List<String> similar = new ArrayList<>();
+        for (StarSystemAPI s : Global.getSector().getStarSystems()) {
+            if (similarity(query, s.getBaseName()) != Integer.MAX_VALUE) similar.add(s.getName());
+            if (similar.size() >= 5) break;
+        }
+        print("No star system or star called '" + query + "' was found."
+                + (similar.isEmpty() ? "" : " Similar systems: " + String.join(", ", similar) + "."));
+        return null;
+    }
+
     public static List<String> starTypeSuggestions() {
         List<String> l = new ArrayList<>();
         for (PlanetSpecAPI s : starTypes()) {
@@ -666,10 +708,19 @@ public final class WsUtil {
      * Cancel does nothing. A newer request with the same key replaces an older one that is still waiting.
      */
     public static void confirm(String key, String question, String retypeHint, Script onYes) {
-        cancelPending(key);
-        Global.getSector().addTransientScript(new ConfirmScript(key, question, retypeHint, onYes));
+        popup(key, question, "Yes", "Cancel", retypeHint, onYes, null);
         print("Close the console to get a Yes/Cancel popup (leave any open planet dialog first), or type: "
                 + retypeHint);
+    }
+
+    /**
+     * A two-button popup shown once the console and any dialog are closed. {@code onNo} may be null (the
+     * second button then just closes it). Transient, so nothing is written to the save.
+     */
+    public static void popup(String key, String question, String yesText, String noText, String retypeHint,
+                             Script onYes, Script onNo) {
+        cancelPending(key);
+        Global.getSector().addTransientScript(new ConfirmScript(key, question, yesText, noText, retypeHint, onYes, onNo));
     }
 
     /** Drops a popup that is still waiting, e.g. because the user confirmed by typing "yes" instead. */
@@ -686,16 +737,23 @@ public final class WsUtil {
         private static final int MAX_TRIES = 600;
         private final String key;
         private final String question;
+        private final String yesText;
+        private final String noText;
         private final String retypeHint;
         private final Script onYes;
+        private final Script onNo;
         private boolean done = false;
         private int failedTries = 0;
 
-        ConfirmScript(String key, String question, String retypeHint, Script onYes) {
+        ConfirmScript(String key, String question, String yesText, String noText, String retypeHint,
+                      Script onYes, Script onNo) {
             this.key = key;
             this.question = question;
+            this.yesText = yesText;
+            this.noText = noText;
             this.retypeHint = retypeHint;
             this.onYes = onYes;
+            this.onNo = onNo;
         }
 
         @Override
@@ -715,11 +773,12 @@ public final class WsUtil {
             if (ui == null || ui.isShowingDialog() || ui.isShowingMenu()) return;
             boolean shown;
             try {
-                shown = ui.showConfirmDialog(question, "Yes", "Cancel", onYes, new Script() {
+                Script no = onNo != null ? onNo : new Script() {
                     @Override
                     public void run() {
                     }
-                });
+                };
+                shown = ui.showConfirmDialog(question, yesText, noText, onYes, no);
             } catch (Exception ex) {
                 Global.getLogger(WsUtil.class).warn("Worldsmith: confirm dialog failed", ex);
                 shown = false;

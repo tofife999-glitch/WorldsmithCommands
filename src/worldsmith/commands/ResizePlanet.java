@@ -17,9 +17,13 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-/** Changes a planet's size; "auto" picks a normal size for its type. */
+/**
+ * Changes a planet's size. The size is its radius in the game's distance units (the same units as orbit
+ * distances): a number sets it directly, "150%" scales the current size (200% = twice as big), "auto" picks a
+ * normal size for its type.
+ */
 public class ResizePlanet implements BaseCommandWithSuggestion {
-    private static final String USAGE = "resizeplanet [planet] <size|auto>";
+    private static final String USAGE = "resizeplanet [planet] <size|percent|auto>   e.g. 200 or 150% or auto";
     private static final float MIN_SIZE = 30f;
     private static final float MAX_SIZE = 1000f;
 
@@ -36,14 +40,17 @@ public class ResizePlanet implements BaseCommandWithSuggestion {
         }
         String last = parts.remove(parts.size() - 1);
         boolean auto = last.equalsIgnoreCase("auto");
-        if (!auto && !WsUtil.isInt(last)) {
-            WsUtil.print("The last word must be a size (like 150) or 'auto'. Usage: " + USAGE);
+        boolean percent = last.endsWith("%") && WsUtil.isInt(last.substring(0, last.length() - 1));
+        if (!auto && !percent && !WsUtil.isInt(last)) {
+            WsUtil.print("The last word must be a size (like 150), a percentage of the current size (like 200%)"
+                    + " or 'auto'. Usage: " + USAGE);
             return CommandResult.BAD_SYNTAX;
         }
         SectorEntityToken target = WsUtil.resolveTarget(WsUtil.join(parts, 0, parts.size()), context,
                 WsUtil.Kind.PLANET, "planet or moon", USAGE);
         if (target == null) return CommandResult.ERROR;
         PlanetAPI planet = (PlanetAPI) target;
+        float oldRadius = planet.getRadius();
 
         float newRadius;
         if (auto) {
@@ -56,14 +63,15 @@ public class ResizePlanet implements BaseCommandWithSuggestion {
             float max = Math.max(min, gen.getMaxRadius());
             newRadius = min + new Random().nextFloat() * (max - min);
         } else {
-            newRadius = Integer.parseInt(last);
+            newRadius = percent ? oldRadius * Integer.parseInt(last.substring(0, last.length() - 1)) / 100f
+                    : Integer.parseInt(last);
             if (newRadius < MIN_SIZE || newRadius > MAX_SIZE) {
-                WsUtil.print("Size must be between " + Math.round(MIN_SIZE) + " and " + Math.round(MAX_SIZE)
-                        + " (vanilla rocky planets are about 90-220, gas giants 250-400).");
+                WsUtil.print("That would make it " + Math.round(newRadius) + "; the size must stay between "
+                        + Math.round(MIN_SIZE) + " and " + Math.round(MAX_SIZE) + " (now " + Math.round(oldRadius)
+                        + "; vanilla rocky planets are about 90-220, gas giants 250-400).");
                 return CommandResult.BAD_SYNTAX;
             }
         }
-        float oldRadius = planet.getRadius();
         LocationAPI loc = planet.getContainingLocation();
         List<SectorEntityToken> all = OrbitCheck.relevant(loc);
 
@@ -98,13 +106,13 @@ public class ResizePlanet implements BaseCommandWithSuggestion {
         }
         planet.setRadius(newRadius);
         WsUtil.print("Resized " + planet.getName() + " in " + WsUtil.systemName(planet) + " from " + Math.round(oldRadius)
-                + " to " + Math.round(newRadius) + ".");
+                + " to " + Math.round(newRadius) + " (" + Math.round(100f * newRadius / oldRadius) + "% of before).");
         return CommandResult.SUCCESS;
     }
 
     @Override
     public List<String> getSuggestions(int parameter, List<String> previous, CommandContext context) {
-        List<String> l = WsUtil.list("auto", "100", "150", "200", "300", "400");
+        List<String> l = WsUtil.list("auto", "50%", "150%", "200%", "100", "150", "200", "300", "400");
         if (parameter == 0) l.addAll(WsUtil.bodySuggestions(WsUtil.Kind.PLANET));
         return l;
     }

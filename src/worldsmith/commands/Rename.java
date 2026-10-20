@@ -21,16 +21,36 @@ import java.util.regex.Pattern;
 public class Rename implements BaseCommandWithSuggestion {
     private static final String USAGE = "rename <current name> <new name>";
 
+    /** What the current name may refer to. */
+    private enum Mode { ANY, SYSTEM, STAR }
+
     private static void printHowTo() {
         WsUtil.print("How to use rename:");
         WsUtil.printRaw("  rename <current name> <new name>     e.g.  rename Glith_I Hakeball   (Tab completes the current name)");
         WsUtil.printRaw("  rename <current name> > <new name>   e.g.  rename Glith I > Hakeball (use > if you're unsure)");
         WsUtil.printRaw("  rename <new name>                    with a planet's or station's dialog open");
-        WsUtil.printRaw("  Star systems work too: rename Glith > Hakeball renames the system, its star and planets like Glith I.");
+        WsUtil.printRaw("  rename system <system> <new name>    renames a star system, plus its star and planets named after it");
+        WsUtil.printRaw("  rename star <star> <new name>        renames only that star");
     }
 
     private static String cleanNewName(String s) {
         return s.trim().replace('_', ' ').replaceAll("\\s+", " ");
+    }
+
+    private static List<SectorEntityToken> stars() {
+        List<SectorEntityToken> out = new ArrayList<>();
+        for (SectorEntityToken e : WsUtil.allBodies()) {
+            if (WsUtil.isStar(e)) out.add(e);
+        }
+        return out;
+    }
+
+    private static boolean names(String oldName, Mode mode) {
+        switch (mode) {
+            case SYSTEM: return !WsUtil.exactSystems(oldName).isEmpty();
+            case STAR: return !WsUtil.exactMatches(oldName, stars()).isEmpty();
+            default: return !WsUtil.exactMatches(oldName, WsUtil.allBodies()).isEmpty() || !WsUtil.exactSystems(oldName).isEmpty();
+        }
     }
 
     @Override
@@ -40,6 +60,12 @@ public class Rename implements BaseCommandWithSuggestion {
             return CommandResult.WRONG_CONTEXT;
         }
         String a = args.trim();
+        Mode mode = Mode.ANY;
+        List<String> words = WsUtil.splitArgs(a);
+        if (words.size() >= 2 && (words.get(0).equalsIgnoreCase("system") || words.get(0).equalsIgnoreCase("star"))) {
+            mode = words.get(0).equalsIgnoreCase("system") ? Mode.SYSTEM : Mode.STAR;
+            a = a.substring(words.get(0).length()).trim();
+        }
         if (a.isEmpty() || a.equals(">")) {
             printHowTo();
             return CommandResult.BAD_SYNTAX;
@@ -54,44 +80,76 @@ public class Rename implements BaseCommandWithSuggestion {
                 printHowTo();
                 return CommandResult.BAD_SYNTAX;
             }
-            if (oldName.isEmpty()) {
+            if (oldName.isEmpty() && mode == Mode.ANY) {
                 SectorEntityToken d = WsUtil.resolveTarget("", context, WsUtil.Kind.ANY, "planet or station", USAGE);
                 if (d == null) return CommandResult.ERROR;
                 renameBody(d, newName);
                 return CommandResult.SUCCESS;
             }
-            return renameNamed(oldName, newName);
+            return renameNamed(oldName, newName, mode);
         }
 
         // No '>': with a planet/station dialog open, everything typed is the new name for it.
-        SectorEntityToken d = WsUtil.dialogTarget(context);
-        if (d != null) {
-            renameBody(d, cleanNewName(a));
-            return CommandResult.SUCCESS;
+        if (mode == Mode.ANY) {
+            SectorEntityToken d = WsUtil.dialogTarget(context);
+            if (d != null) {
+                renameBody(d, cleanNewName(a));
+                return CommandResult.SUCCESS;
+            }
         }
         // Otherwise the longest leading part that is exactly the name (or ID) of a planet, station or
         // system is the current name, and the rest is the new name.
         List<String> parts = WsUtil.splitArgs(a);
         for (int k = parts.size() - 1; k >= 1; k--) {
             String oldName = WsUtil.join(parts, 0, k);
-            if (!WsUtil.exactMatches(oldName, WsUtil.allBodies()).isEmpty() || !WsUtil.exactSystems(oldName).isEmpty())
-                return renameNamed(oldName, cleanNewName(WsUtil.join(parts, k, parts.size())));
+            if (names(oldName, mode)) return renameNamed(oldName, cleanNewName(WsUtil.join(parts, k, parts.size())), mode);
         }
         if (parts.size() == 1) {
-            WsUtil.print("Only one name was given and no planet dialog is open, so I don't know what to rename.");
+            WsUtil.print("Only one name was given" + (mode == Mode.ANY ? " and no planet dialog is open" : "")
+                    + ", so I don't know what to rename.");
         } else {
-            WsUtil.print("The start of '" + a + "' isn't the name of any planet, station or system.");
+            String what = mode == Mode.SYSTEM ? "star system" : (mode == Mode.STAR ? "star" : "planet, station or system");
+            WsUtil.print("The start of '" + a + "' isn't the name of any " + what + ".");
             printDidYouMean(parts.get(0));
         }
         printHowTo();
         return CommandResult.BAD_SYNTAX;
     }
 
-    private static CommandResult renameNamed(String oldName, String newName) {
+    private static CommandResult renameNamed(String oldName, String newName, Mode mode) {
         if (newName.isEmpty()) {
             printHowTo();
             return CommandResult.BAD_SYNTAX;
         }
+        if (mode == Mode.SYSTEM) {
+            List<StarSystemAPI> systems = WsUtil.exactSystems(oldName);
+            if (systems.size() == 1) {
+                renameSystem(systems.get(0), newName);
+                return CommandResult.SUCCESS;
+            }
+            if (systems.isEmpty()) {
+                printDidYouMean(oldName);
+            } else {
+                WsUtil.print("Several systems match '" + oldName + "'. Use the system ID:");
+                for (StarSystemAPI s : systems) WsUtil.printRaw("  - " + s.getName() + " (ID " + s.getId() + ")");
+            }
+            return CommandResult.ERROR;
+        }
+        if (mode == Mode.STAR) {
+            List<SectorEntityToken> hits = WsUtil.exactMatches(oldName, stars());
+            if (hits.size() == 1) {
+                renameBody(hits.get(0), newName);
+                return CommandResult.SUCCESS;
+            }
+            if (hits.isEmpty()) {
+                printDidYouMean(oldName);
+            } else {
+                WsUtil.print(hits.size() + " stars are called '" + oldName + "'. Use the ID:");
+                for (SectorEntityToken b : hits) WsUtil.printRaw("  - " + WsUtil.describe(b));
+            }
+            return CommandResult.ERROR;
+        }
+
         List<SectorEntityToken> bodies = WsUtil.exactMatches(oldName, WsUtil.allBodies());
         List<StarSystemAPI> systems = WsUtil.exactSystems(oldName);
 
@@ -107,12 +165,13 @@ public class Rename implements BaseCommandWithSuggestion {
                 if (!(WsUtil.isStar(b) && b.getContainingLocation() == sys)) onlyItsStars = false;
             }
             if (onlyItsStars) {
+                // A system and its star with the same name: the system is renamed (and the star with it).
                 renameSystem(sys, newName);
                 return CommandResult.SUCCESS;
             }
-            WsUtil.print("'" + oldName + "' is both a star system and a body. Use an ID:");
-            WsUtil.printRaw("  - system: " + sys.getName() + " (ID " + sys.getId() + ")");
-            for (SectorEntityToken b : bodies) WsUtil.printRaw("  - body: " + WsUtil.describe(b));
+            WsUtil.print("'" + oldName + "' is both a star system and a planet or station. Say which one you mean:");
+            WsUtil.printRaw("  - rename system " + oldName + " > " + newName);
+            for (SectorEntityToken b : bodies) WsUtil.printRaw("  - rename " + b.getId() + " > " + newName + "   (" + WsUtil.describe(b) + ")");
             return CommandResult.ERROR;
         }
         if (bodies.size() > 1) {
@@ -263,9 +322,12 @@ public class Rename implements BaseCommandWithSuggestion {
     @Override
     public List<String> getSuggestions(int parameter, List<String> previous, CommandContext context) {
         // Only the current name is completed; the new name is free text.
-        if (parameter != 0) return new ArrayList<>();
+        boolean keyword = !previous.isEmpty()
+                && (previous.get(0).equalsIgnoreCase("system") || previous.get(0).equalsIgnoreCase("star"));
+        if (parameter > 1 || (parameter == 1 && !keyword)) return new ArrayList<>();
         List<String> l = WsUtil.bodySuggestions(WsUtil.Kind.ANY);
         l.addAll(WsUtil.systemSuggestions());
+        if (parameter == 0) l.addAll(WsUtil.list("system", "star"));
         return l;
     }
 }

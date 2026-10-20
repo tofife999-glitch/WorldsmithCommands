@@ -9,6 +9,14 @@ Worldsmith Commands - changelog
 - New faction commands: factionpower (report, 'clear' ends Worldsmith effects), strengthenfaction and
   weakenfaction with levels 1-3. All faction effects are gradual and wear off by themselves; level 3 lasts
   up to 3 years.
+- New removal commands: removeobject, removering, removemoon (same as removeplanet).
+- New wshelp command: plain-language help for filters, conditions, objects, rings, sizes, renaming,
+  removing, new systems and factions.
+- newsystem asks whether to generate planets, moons, rings and stable locations or keep the system empty
+  ('full' / 'empty' answer it in advance); the new star is named '<name> Prime'.
+- rename system <name> <new name> and rename star <name> <new name>.
+- changestar accepts the system or star name and the star type in any order, with clearer messages.
+- resizeplanet accepts percentages (200% = twice as wide).
 - popcap now replaces a Worldsmith growth freeze on that colony.
 
 1.0.1 (2026-10-19)

@@ -28,7 +28,7 @@ public class AddObject implements BaseCommandWithSuggestion {
     private static final String USAGE = "addobject <type>";
     /** Reach used for the overlap check; these objects are small. */
     private static final float OBJECT_REACH = 50f;
-    private static final Map<String, String> TYPES = new LinkedHashMap<>();
+    static final Map<String, String> TYPES = new LinkedHashMap<>();
 
     static {
         TYPES.put("stable_location", Entities.STABLE_LOCATION);
@@ -41,7 +41,7 @@ public class AddObject implements BaseCommandWithSuggestion {
         TYPES.put("inactive_gate", Entities.INACTIVE_GATE);
     }
 
-    private static String resolve(String raw) {
+    static String resolve(String raw) {
         String t = raw.toLowerCase(Locale.ROOT).replace(' ', '_');
         if (TYPES.containsKey(t)) return t;
         switch (t) {
