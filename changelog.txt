@@ -1,5 +1,11 @@
 Worldsmith Console Commands - changelog
 
+1.1.1 (2026-10-20)
+- Renamed to Worldsmith Console Commands (GitHub: WorldsmithConsoleCommands; old links redirect).
+  The mod ID is still worldsmith_commands, so saves and update checks keep working.
+- Updating by hand: delete the old 'Worldsmith Commands' folder in mods/ first, so the mod isn't
+  installed twice.
+
 1.1.0 (2026-10-20)
 - IMPORTANT: no longer a utility mod. It now ships 8 blank faction slots for spawnfaction, which become part
   of every save it runs in, so it can be added to a running save but not removed from one.
