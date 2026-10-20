@@ -1,7 +1,7 @@
-# Worldsmith Commands
+# Worldsmith Console Commands
 
 Console commands for shaping the sector. Starsector 0.98a-RC8; needs Console Commands, LazyLib and
-Nexerelin. [Download](https://github.com/tofife999-glitch/WorldsmithCommands/releases/latest)
+Nexerelin. [Download](https://github.com/tofife999-glitch/WorldsmithConsoleCommands/releases/latest)
 
 Open the console with Ctrl+Backspace. `help worldsmith` lists the commands, `help <command>` explains one,
 and `wshelp` has plain-language topics.

@@ -1,4 +1,4 @@
-Worldsmith Commands - changelog
+Worldsmith Console Commands - changelog
 
 1.1.0 (2026-10-20)
 - IMPORTANT: no longer a utility mod. It now ships 8 blank faction slots for spawnfaction, which become part

@@ -1,5 +1,5 @@
 {
-	# Worldsmith Commands faction slot 7 (purple). It stays hidden and unused until the
+	# Worldsmith Console Commands faction slot 7 (purple). It stays hidden and unused until the
 	# 'spawnfaction' console command fills it: that sets its name, flag, ships, doctrine and colonies.
 	"id":"worldsmith_faction7",
 	"color":[155,85,225,255],

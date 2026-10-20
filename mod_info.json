@@ -1,13 +1,13 @@
 {
 	"id": "worldsmith_commands",
-	"name": "Worldsmith Commands",
+	"name": "Worldsmith Console Commands",
 	"author": "Jan",
 	"version": { "major": 1, "minor": 1, "patch": 0 },
 	"description": "Console commands for shaping the sector: search and inspect planets and systems, terraform, rename, recolor, add, move, resize or remove planets, moons, rings, stars and whole star systems, found new factions with their own name, flag and lore, start total war or total peace, gradually strengthen or weaken factions, or end the world. Can be added to a running save, but not removed from one (it adds faction slots to the save).",
 	"gameVersion": "0.98a-RC8",
 	"utility": false,
 	"modPlugin": "worldsmith.WsModPlugin",
-	"jars": ["jars/WorldsmithCommands.jar"],
+	"jars": ["jars/WorldsmithConsoleCommands.jar"],
 	"dependencies": [
 		{ "id": "lw_console", "name": "Console Commands" },
 		{ "id": "lw_lazylib", "name": "LazyLib" },

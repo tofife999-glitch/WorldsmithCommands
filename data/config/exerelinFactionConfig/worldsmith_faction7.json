@@ -1,6 +1,6 @@
 {
-	# Worldsmith Commands faction slot 7. Inactive (not playable) until 'spawnfaction' fills it;
-	# Worldsmith Commands then switches playableFaction on whenever a save with that faction is loaded,
+	# Worldsmith Console Commands faction slot 7. Inactive (not playable) until 'spawnfaction' fills it;
+	# Worldsmith Console Commands then switches playableFaction on whenever a save with that faction is loaded,
 	# so Nexerelin treats it like any other faction (diplomacy, invasions, alliances, respawning).
 	"playableFaction":false,
 	"startingFaction":false,

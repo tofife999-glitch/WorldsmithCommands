@@ -62,14 +62,14 @@ public class PopCap implements BaseCommandWithSuggestion {
         float base = Misc.MAX_COLONY_SIZE;
         float before = mod.computeEffective(base);
         float delta = cap - before;
-        mod.modifyFlatAlways(WsUtil.MOD_SOURCE, delta, "Population cap (Worldsmith Commands)");
+        mod.modifyFlatAlways(WsUtil.MOD_SOURCE, delta, "Population cap (Worldsmith Console Commands)");
         float after = mod.computeEffective(base);
         // Other mods may apply percent/mult modifiers; scale the flat part so the result still lands on the cap.
         if (Math.round(after) != cap && delta != 0f) {
             float perUnit = (after - before) / delta;
             if (perUnit > 0f) {
                 mod.modifyFlatAlways(WsUtil.MOD_SOURCE, (cap - before) / perUnit,
-                        "Population cap (Worldsmith Commands)");
+                        "Population cap (Worldsmith Console Commands)");
             }
         }
         int max = Misc.getMaxMarketSize(market);
