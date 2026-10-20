@@ -98,8 +98,10 @@ public final class JumpPoints {
         }
         LocationAPI hyper = Global.getSector().getHyperspace();
         JumpPointAPI outside = Global.getFactory().createJumpPoint(null, sys.getBaseName() + ", " + name);
-        if (sys.getStar() != null) outside.setStandardWormholeToStarOrPlanetVisual(sys.getStar());
-        else outside.setStandardWormholeToNothingVisual();
+        // What the game gives hyperspace jump points that aren't tied to a planet (like fringe jump points):
+        // the dark starfield look and a smaller size. The star's look is only for jump points to the star.
+        outside.setStandardWormholeToStarfieldVisual();
+        outside.setRadius(50f);
         hyper.addEntity(outside);
         outside.setFixedLocation(hyperLoc.x, hyperLoc.y);
         inside.addDestination(new JumpPointAPI.JumpDestination(outside, "Hyperspace"));

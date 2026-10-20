@@ -3,131 +3,222 @@
 Console commands for shaping the sector. Starsector 0.98a-RC8; needs Console Commands, LazyLib and
 Nexerelin. [Download](https://github.com/tofife999-glitch/WorldsmithCommands/releases/latest)
 
-Type `help worldsmith` in the console for the command list, and `wshelp` for explanations.
+Open the console with Ctrl+Backspace. `help worldsmith` lists the commands, `help <command>` explains one,
+and `wshelp` has plain-language topics.
 
-## Commands
+- Type names as shown on the map. Case doesn't matter, underscores count as spaces (`Corvus_IV` =
+  `Corvus IV`), and IDs work too.
+- Without a name, most commands use the planet whose dialog is open.
+- `[brackets]` are optional; `a|b` means "a or b".
 
-**Planets and systems**
+## Looking things up
 
-- `showsystem [system]`: list a system's planets with type, hazard, owner and resources
-- `findplanet <filters>`: search the sector (see below)
-- `planetinfo [planet]`: everything about one planet
-- `planettypes [filter]` / `startypes [filter]`: list all planet / star types
-- `visit <planet>`: open any planet's dialog from anywhere
-- `terraform [planet] <type> [keep]`: change a planet's type (`keep` keeps its conditions)
-- `rename [system|faction] <current name> <new name>`: rename a planet, station, system or faction
-- `recolor [planet] <color>`: tint a planet, moon or star
-- `addplanet [type] [name]` / `addmoon <planet> [type] [name]`: add a planet or moon
-- `addring [planet] <type>`: add an asteroid belt, ring or magnetic field (around the star without a planet)
-- `addobject <type>`: add a stable location, relay, buoy, sensor array or gate
-- `addstar [type] [name]`: add a second or third star to a system
-- `addfield <asteroids|debris> [small|large]`: add an asteroid field or a salvageable debris field
-- `newsystem <name> [star type] [full|empty]`: create a star system in hyperspace
-- `addjumppoint [name]`: add a two-way jump point where you are
-- `moveplanet <planet>` / `resizeplanet [planet] <size>`: move a planet to your orbit, or resize it
-- `hyperclouds <clear|add> [radius]`: clear or grow hyperspace clouds around you
-- `removeplanet`, `removemoon`, `removering`, `removeobject`: remove things again
+- `showsystem [system]`: every planet, moon and station of a system, with type, hazard, owner and
+  resources.
+- `planetinfo [planet]`: everything about one planet: size, orbit, industries, its conditions and how
+  much each adds to the hazard.
+- `planettypes [filter]` / `startypes [filter]`: all planet or star types, modded ones included. The
+  filter shows only types whose name contains it.
+- `visit <planet|station|star>`: opens its dialog from anywhere.
+- `findplanet <filters>`: searches the sector and lists the nearest 20 matches. Combine any of:
+  - a condition such as `farmland_rich`, or a group such as `farmland`, `ore` or `ruins`
+    (`wshelp conditions` lists them all)
+  - `-toxic_atmosphere`: must not have it
+  - `habitable`, `uncolonized`, `colonized`
+  - `type:jungle`: that planet type
+  - `hazard<150`: hazard below 150% (also `<=`, `>`, `>=`)
+  - `within:20`: at most 20 light-years from you
+  - `owner:hegemony`: colonies of that faction
+  - `all`: also planets you haven't surveyed
 
-**Colonies and factions**
+  Example: `findplanet habitable farmland hazard<150 within:20`
 
-- `treatasnpccolony [colony] [off]`: make Nexerelin treat a colony like its own expedition colony
-- `popcap [colony] <size|off>`: cap a colony's size
-- `spawnfaction <name>`: found a new faction (see below)
-- `factionflag <faction>` / `factionlore <faction> <text>`: change any faction's flag (picked from pictures) or lore
-- `factionships`, `factiondoctrine`, `factionpersonality`: shape a spawned faction (see below)
-- `factionpower`, `strengthenfaction`, `weakenfaction`: faction strength (see below)
-- `wars [faction]`: who is at war with whom
-- `armada <faction> [system] [small|medium|large]`: send a faction's war fleet to attack a system
-- `rebellion [colony] [faction]`: start a Nexerelin rebellion in one colony
-- `totalwar` / `totalpeace`: everyone at war, or everyone at peace
-- `apocalypse <remnant|bombard|revolution>`: end the world (see below)
-- `wshelp [topic]`: explanations in the game
+## Planets and colonies
 
-For founding colonies, sending colony expeditions and adding objects like relays, use the Additional
-Console Commands mod (`colonizeplanet`, `spawncolonyfleet`, `addentity`).
+- `terraform [planet] <type> [keep]`: changes an uncolonized planet's type and rolls new conditions that
+  fit it (`planettypes` lists the types).
+  - `keep`: only the type changes and the conditions stay; this also works on colonies
+- `rename <current name> <new name>`: renames a planet, station or colony.
+  - put a `>` between the names if you're unsure where the current one ends
+  - with a planet's dialog open, just `rename <new name>`
+  - `rename system <system> <new name>`: the system, its star and the planets named after it
+    (Glith I becomes Hakeball I). Stars always follow their system's name.
+  - `rename faction <faction> <new name>`: a faction, everywhere; `reset` as the new name undoes it
+- `recolor [planet] <color>`: tints a planet, moon or star. Only the look changes.
+  - `red`, `orange`, `yellow`, `gold`, `green`, `teal`, `cyan`, `blue`, `purple`, `pink`, `white`,
+    `grey`, `brown`, `black`
+  - a hex color such as `#3080ff`
+  - `random`
+  - `reset`: the standard look of its type
+- `addplanet [type|random] [name]`: a planet at your distance from the star, generated like vanilla's.
+- `addmoon <planet> [type|random] [name]`: a moon at your distance from the planet, or in its first
+  free orbit.
+- `moveplanet <planet>`: moves it, with its moons, to your distance and angle.
+- `resizeplanet [planet] <size>`: the size is the planet's radius (`planetinfo` shows it).
+  - a number: the new radius. Rocky planets are about 90-220, gas giants 250-400.
+  - a percentage: `200%` makes it twice as wide, `50%` half as wide
+  - `auto`: a normal size for its type
+- `popcap [colony] <size|off>`: the colony stops growing at that size. It never shrinks a colony.
+  - `off`: removes the cap
+- `treatasnpccolony [colony] [off]`: Nexerelin treats it like its own expedition colonies: the AI
+  builds it up as it grows, and Nexerelin's size limit for such colonies applies.
+  - `off`: removes that mark
 
-## How things work
+## Systems, stars and space
 
-**Names.** Type names as shown on the map. Case doesn't matter, and underscores count as spaces
-(`Corvus_IV` = `Corvus IV`). IDs work too. Without a name, most commands use the open planet dialog.
+- `newsystem <name> [star type] [full|empty]`: in hyperspace, a new star system at your position, with
+  an inner and a fringe jump point. A popup asks how to fill it, unless you say so in advance:
+  - `full`: planets, moons, rings and stable locations, like a random system
+  - `empty`: only the star
 
-**findplanet filters** (combine any): a condition like `farmland_rich` or a group like `farmland`,
-`ore` or `ruins` (`wshelp conditions` lists them); `-toxic_atmosphere` excludes one. Other filters:
+  Without a star type it picks one at random; black holes and neutron stars work too. The star is
+  called "<name> Prime".
+- `addstar [star type|random] [name]`: a second or third star at your position, orbiting the main star:
+  a binary or trinary system.
+- `addring [planet] <type>`: around the star at your distance from it, or around the named planet.
+  - `belt`: an asteroid belt with asteroids
+  - `dust`: a dusty ring that looks like debris
+  - `ice`: an ice ring
+  - `magfield`: a magnetic field
+- `addobject <type>`: at your position, orbiting the star.
+  - `stable_location`: an empty stable orbit, where a relay, buoy or array can be built
+  - `comm_relay`: helps the stability of colonies in the system
+  - `nav_buoy`: fleets travel faster in the system
+  - `sensor_array`: better sensor range in the system
+  - `comm_relay_makeshift`, `nav_buoy_makeshift`, `sensor_array_makeshift`: weaker versions
+  - `inactive_gate`: a gate
 
-- `habitable`, `uncolonized`, `colonized`, `type:jungle`
-- `hazard<150` = hazard rating below 150%
-- `within:20` = at most 20 light-years from your fleet (`within:40` searches twice as far)
-- `owner:hegemony`
-- `all` = also search planets you haven't surveyed
+  Relays, buoys and arrays start unclaimed, so you claim them like any other.
+- `addfield <asteroids|debris> [small|large]`: at your position.
+  - `asteroids`: an asteroid field
+  - `debris`: a debris field you can salvage
+  - `small` / `large`: its size (otherwise in between)
+- `addjumppoint [name]`: a two-way jump point where you are. In a system, it leads out to hyperspace;
+  in hyperspace, it leads into the nearest system (at most 3 light-years away).
+- `hyperclouds <clear|add> [radius]`: in hyperspace, around you.
+  - `clear`: removes the clouds and the storms in them
+  - `add`: grows new clouds (star systems keep their clear space)
+  - radius: 0.5 to 5 light-years, 1 if you leave it out
 
-Example: `findplanet habitable farmland hazard<150 within:20`.
+## Removing things
 
-**addring types:** `belt` (asteroid belt), `dust` or `ice` (a ring), `magfield` (magnetic field).
-Around the star they go at your distance from it; around a planet, at your distance or in the first
-free orbit.
+Everything here asks Yes/Cancel first.
 
-**Sizes.** A planet's size is its radius (`planetinfo` shows it).
+- `removeplanet <planet>` / `removemoon <moon>`: uninhabited planets and moons, and the second or third
+  star of a system. Rings and debris around them go with them.
+- `removering [planet] [belt|ring|magfield]`: without a planet, the belt, ring or field around the star
+  nearest to you. With a planet, all its rings, or only the kind you name.
+- `removeobject [type|name]`: the nearest object where you are, the nearest of a type, or one by name.
+  - `stable`, `relay`, `buoy`, `sensor`, `gate`: the objects `addobject` makes
+  - `field`: an asteroid or debris field
+  - `jumppoint`: a jump point made with `addjumppoint` (both ends)
 
-- The same number changes nothing; twice the number, or `200%`, makes it twice as wide.
-- Rocky planets are about 90-220, gas giants 250-400.
-- `auto` picks a normal size for the planet's type.
+## New factions
 
-**Stars.** `newsystem` and `addstar` take every star type, including black holes (with an event
-horizon) and neutron stars (with a pulsar beam). `addstar` makes a binary or trinary system;
-`removeplanet` removes the extra star again. New systems get an inner and a fringe jump point.
+- `spawnfaction <name> [options]`: founds a new faction. A popup asks for anything you leave out and
+  shows the planets before anything happens.
+  - `here` / `random`: in your system, or at a random empty place ("Pick another place" rolls again)
+  - `small` / `medium` / `large`: 1, 3 or 5 colonies
+  - `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple`, `pink`: its color on the map. There
+    are 8 slots, one per color; `spawnfaction list` shows which are free.
+  - `like <faction>`: it uses that faction's ships, weapons and way of fighting. Without it, a random
+    faction's.
 
-**Renaming a system.**
+  It gets a random player flag and empty lore, and Nexerelin runs it like any other faction:
+  diplomacy, wars, invasions, alliances. A slot frees up again when its faction has no colonies left.
+- `factionflag <faction> [option]`: changes any faction's flag.
+  - no option: a popup shows the flags as pictures; browse with Next/Previous or the arrow keys
+  - `random`: a random player flag
+  - a number: that player flag (`factionflag list` numbers them)
+  - another faction: copies its flag
+  - `reset`: its own flag again
+- `factionlore <faction> [option]`: the text on the faction's page in the Intel screen. Works for every
+  faction.
+  - no option: shows the text
+  - any text: replaces it (a `|` starts a new paragraph; don't use `;`, the console splits commands there)
+  - `add <text>`: adds a paragraph
+  - `reset`: brings back the original
 
-- `rename system Glith Hakeball` renames the system, its star, and planets named after it
-  (Glith I becomes Hakeball I).
-- Stars follow their system's name. New systems name their star "<name> Prime".
+These three shape a faction made with `spawnfaction`. Without an option, each one shows the current
+setting, and every setting stays in the save.
 
-**Removing.**
+- `factionships <faction> <style>`: which ships its new fleets use.
+  - `lowtech`, `midline`, `hightech`: only ships of that tech level
+  - `pirate`: pirate and low tech ships
+  - `all`: every ship the sector's factions use
+  - `like <faction>`: copies that faction completely: the same ships, the same weapons and the same
+    way of fighting. For example, `like tritachyon` makes it fly Tri-Tachyon ships with Tri-Tachyon
+    tactics.
+- `factiondoctrine <faction> <preset>`: how its fleets are put together and how they fight. Presets add
+  up (for example `aggressive`, then `carriers`, then `elite`); a new one replaces an earlier one that
+  sets the same thing.
+  - `aggressive`: its captains charge in and fight to the end
+  - `cautious`: its captains keep their distance and pull back sooner
+  - `carriers`: mostly carriers and fighters
+  - `phase`: mostly phase ships
+  - `warships`: mostly gun ships, few carriers or phase ships
+  - `elite`: fewer ships, but the best quality and officers
+  - `swarm`: many cheap, small ships with weak officers
+  - `capitals`: mostly big ships
+  - `reset`: back to the doctrine of the faction it copies
+- `factionpersonality <faction> <type>`: how it behaves towards others.
+  - `warlike`: declares war easily and tires of it slowly
+  - `peaceful`: never starts wars itself and tires of them quickly
+  - `pirate`: Nexerelin treats it as a pirate faction: hostile to everyone except pirates, free ports,
+    nothing illegal
+  - `lawful`: back to normal diplomacy after `pirate`
+  - `expansionist`: sends colony expeditions often
+  - `isolationist`: sends no colony expeditions
+  - `normal`: undoes all of the above
 
-- `removeplanet` and `removemoon` delete uninhabited planets or moons.
-- `removering` removes the belt, ring or field nearest to you around the star, or all rings of a
-  named planet.
-- `removeobject` removes the nearest object or field (or one of a type, or a named one).
-- Removing planets, moons and objects asks first.
+## Faction strength
 
-**New systems.** In hyperspace, `newsystem <name>` creates a system at your position. A popup asks
-whether to generate planets, moons, rings and stable locations, or keep it empty; `full` or `empty`
-answers that in advance.
+- `factionpower <faction> [clear]`: colonies, stability, unrest, disrupted industries, garrisons,
+  Nexerelin invasion points and troop reserves, and any Worldsmith effects with how long they last.
+  - `clear`: ends the Worldsmith effects early
+- `weakenfaction <faction> [1-3]`: first shows what will happen in each colony, then asks. It all wears
+  off by itself.
+  - `1`: unrest for about 6 months
+  - `2`: also a 6-month growth freeze, weaker garrisons, defenses disrupted for 4 months, fewer
+    invasion points
+  - `3`: lasts up to 3 years: 3-year growth freeze, stability -3 fading by 1 a year, military and ship
+    industries disrupted for 1-2 years, drained troops and invasion points
+- `strengthenfaction <faction> [1-3]`: the same in reverse.
+  - `1`: clears unrest and disruptions, lifts Worldsmith growth freezes
+  - `2`: also repairs garrisons, adds troops and invasion points, +2 stability for 6 months
+  - `3`: also +3 stability fading by 1 a year, and many more invasion points
 
-**New factions.** `spawnfaction Hakeball Republic` opens a popup that asks where (your system or a
-random empty place) and how big (1, 3 or 5 colonies), then shows the planets before anything happens.
+## War and peace
 
-- The faction gets a random player flag, empty lore, and the ships and tactics of an existing faction
-  (`like hegemony`, otherwise a random one).
-- Nexerelin runs it like any other faction: diplomacy, wars, invasions, alliances.
-- There are 8 slots, one per color; `spawnfaction list` shows them. A slot frees up again once its
-  faction has no colonies left.
-- `factionlore Hakeball_Republic <text>` writes its lore (a `|` starts a new paragraph);
-  `factionflag <faction>` lets you pick any faction's flag from pictures.
-- Shape it further: `factionships <faction> lowtech|midline|hightech|pirate|all|like <faction>`,
-  `factiondoctrine <faction> aggressive|cautious|carriers|phase|warships|elite|swarm|capitals|reset` and
-  `factionpersonality <faction> warlike|peaceful|pirate|lawful|expansionist|isolationist|normal`.
+- `wars [faction]`: who is at war with whom, the alliances, and how war-weary each faction is. With a
+  faction: its relation (-100 to 100) with every other faction.
+- `totalwar [withplayer]`: every faction with colonies goes to war with every other one, and all
+  alliances break up. Asks first.
+  - `withplayer`: you join in too (with a commission you share your employer's wars anyway)
+- `totalpeace [all] [withplayer]`: every faction with colonies makes peace. Asks first.
+  - `all`: pirates too
+  - `withplayer`: you too
+- `armada <faction> [system] [small|medium|large]`: that faction's war fleet jumps into the system (or
+  the one you are in), attacks its biggest colony for about two months, then leaves. If the two factions
+  aren't at war, only the armada turns hostile; no war is declared.
+  - `small` / `medium` / `large`: its size (medium if you leave it out)
+- `rebellion [colony] [faction]`: a Nexerelin rebellion in one colony. The rebels fight for the faction
+  you name, or for one Nexerelin picks, or for independence. If they win, the colony changes hands.
 
-**Factions.**
+Already in other mods:
+- `setrelation`, `adjustrelation`, and `destroycolony` for one colony (Console Commands)
+- `creatediplomacyevent <a> <b> declare_war|peace_treaty|ceasefire`, `createalliance`, `leavealliance`
+  (Nexerelin)
+- founding colonies and colony expeditions: `colonizeplanet`, `spawncolonyfleet` (Additional Console
+  Commands)
 
-- `factionpower <faction>` shows a faction's colonies, stability, unrest, disrupted industries,
-  garrisons, Nexerelin invasion points and troop reserves. It also lists any Worldsmith effects and
-  how long they still last.
-- `weakenfaction <faction> [1-3]` and `strengthenfaction <faction> [1-3]` first show what will happen
-  in each colony, then ask Yes/Cancel. Level 1 is a light nudge, level 2 lasts months, and level 3
-  lasts up to 3 years.
-- All effects wear off by themselves, and they stay correct across saving and loading.
-- `factionpower <faction> clear` ends them early.
+## Apocalypse
 
-**War and peace.** `totalwar` puts every faction with colonies at war with every other one and breaks
-up all alliances; `totalpeace` makes peace (pirates only with `all`). You stay out of both unless you
-add `withplayer`. Nexerelin's diplomacy carries on from there. `armada hegemony Askonia` sends a
-war fleet that attacks for about two months; without a war, only that fleet turns hostile.
-
-**Apocalypse** (asks first; your own colonies are spared unless you add `all`):
+`apocalypse <scenario> [all]` asks first. Your own colonies are spared unless you add `all`.
 
 - `remnant`: an elite Remnant armada attacks every inhabited system for about two months, then leaves.
-- `bombard`: every colony is saturation-bombed into ruins; story-critical worlds survive.
+- `bombard`: every colony is saturation-bombed into ruins; story-critical worlds survive. This can't be
+  undone.
 - `revolution`: Nexerelin rebellions break out in every colony of size 3 or more.
 
 **Note:** you can add this mod to a running save, but don't remove it from a save afterwards: it adds 8

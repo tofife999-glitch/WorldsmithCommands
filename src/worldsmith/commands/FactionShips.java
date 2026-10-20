@@ -54,9 +54,10 @@ public class FactionShips implements BaseCommandWithSuggestion {
             f.getMemoryWithoutUpdate().unset(FactionCharacter.MEM_SHIPS);
             FactionSlots.copyTech(model, f);
             FactionCharacter.applyDoctrine(f);
-            WsUtil.print(Character.toUpperCase(who.charAt(0)) + who.substring(1) + " now builds the ships of "
-                    + model.getDisplayNameWithArticle() + " (" + f.getKnownShips().size() + " kinds) and fights like them"
-                    + " (plus any factiondoctrine presets).");
+            WsUtil.print(Character.toUpperCase(who.charAt(0)) + who.substring(1) + " now copies "
+                    + model.getDisplayNameWithArticle() + ": it builds the same ships (" + f.getKnownShips().size()
+                    + " kinds) with the same weapons, and its fleets fight the way theirs do (their doctrine, plus any"
+                    + " factiondoctrine presets you added).");
             return CommandResult.SUCCESS;
         }
         if (!FactionCharacter.SHIP_STYLES.contains(style)) {
