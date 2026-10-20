@@ -14,22 +14,52 @@ import org.lazywizard.console.Console;
 import worldsmith.WsUtil;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
- * Removes a stable location, comm relay, nav buoy, sensor array (normal or makeshift) or inactive gate:
- * the same kinds of objects addobject creates. Always asks first.
+ * Removes a stable location, comm relay, nav buoy, sensor array (normal or makeshift) or inactive gate,
+ * whether generated with the sector or added later (e.g. by Additional Console Commands' AddEntity). Always asks first.
  */
 public class RemoveObject implements BaseCommandWithSuggestion {
     private static final String USAGE = "removeobject [type|name]   (types: stable, relay, buoy, sensor, gate)";
+    private static final Map<String, String> TYPES = new LinkedHashMap<>();
+
+    static {
+        TYPES.put("stable_location", Entities.STABLE_LOCATION);
+        TYPES.put("comm_relay", Entities.COMM_RELAY);
+        TYPES.put("nav_buoy", Entities.NAV_BUOY);
+        TYPES.put("sensor_array", Entities.SENSOR_ARRAY);
+        TYPES.put("comm_relay_makeshift", Entities.COMM_RELAY_MAKESHIFT);
+        TYPES.put("nav_buoy_makeshift", Entities.NAV_BUOY_MAKESHIFT);
+        TYPES.put("sensor_array_makeshift", Entities.SENSOR_ARRAY_MAKESHIFT);
+        TYPES.put("inactive_gate", Entities.INACTIVE_GATE);
+    }
+
+    private static String resolve(String raw) {
+        String t = raw.toLowerCase(Locale.ROOT).replace(' ', '_');
+        if (TYPES.containsKey(t)) return t;
+        switch (t) {
+            case "stable": case "stablelocation": return "stable_location";
+            case "relay": return "comm_relay";
+            case "buoy": return "nav_buoy";
+            case "sensor": case "array": return "sensor_array";
+            case "makeshift_relay": return "comm_relay_makeshift";
+            case "makeshift_buoy": return "nav_buoy_makeshift";
+            case "makeshift_sensor": case "makeshift_array": return "sensor_array_makeshift";
+            case "gate": return "inactive_gate";
+            default: return null;
+        }
+    }
 
     private static boolean removable(SectorEntityToken e) {
-        return e.getCustomEntityType() != null && AddObject.TYPES.containsValue(e.getCustomEntityType());
+        return e.getCustomEntityType() != null && TYPES.containsValue(e.getCustomEntityType());
     }
 
     private static String typeKey(SectorEntityToken e) {
-        for (Map.Entry<String, String> t : AddObject.TYPES.entrySet()) {
+        for (Map.Entry<String, String> t : TYPES.entrySet()) {
             if (t.getValue().equals(e.getCustomEntityType())) return t.getKey();
         }
         return e.getCustomEntityType();
@@ -59,13 +89,13 @@ public class RemoveObject implements BaseCommandWithSuggestion {
         LocationAPI here = fleet.getContainingLocation();
 
         SectorEntityToken target = null;
-        String typeKey = query.isEmpty() ? null : AddObject.resolve(query);
+        String typeKey = query.isEmpty() ? null : resolve(query);
         if (query.isEmpty() || typeKey != null) {
             // Nearest object (of that type) in the system you are in.
             float best = Float.MAX_VALUE;
             for (SectorEntityToken e : here.getAllEntities()) {
                 if (!removable(e)) continue;
-                if (typeKey != null && !AddObject.TYPES.get(typeKey).equals(e.getCustomEntityType())) continue;
+                if (typeKey != null && !TYPES.get(typeKey).equals(e.getCustomEntityType())) continue;
                 float d = Misc.getDistance(fleet.getLocation(), e.getLocation());
                 if (d < best) {
                     best = d;
@@ -131,7 +161,7 @@ public class RemoveObject implements BaseCommandWithSuggestion {
     @Override
     public List<String> getSuggestions(int parameter, List<String> previous, CommandContext context) {
         if (parameter == 0) {
-            List<String> l = new ArrayList<>(AddObject.TYPES.keySet());
+            List<String> l = new ArrayList<>(TYPES.keySet());
             l.addAll(WsUtil.list("stable", "relay", "buoy", "sensor", "gate"));
             return l;
         }

@@ -3,6 +3,7 @@ package worldsmith.commands;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.campaign.CampaignTerrainAPI;
+import com.fs.starfarer.api.campaign.FactionAPI;
 import com.fs.starfarer.api.campaign.JumpPointAPI;
 import com.fs.starfarer.api.campaign.PlanetAPI;
 import com.fs.starfarer.api.campaign.SectorEntityToken;
@@ -11,6 +12,8 @@ import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import org.lazywizard.console.BaseCommandWithSuggestion;
 import org.lazywizard.console.CommonStrings;
 import org.lazywizard.console.Console;
+import worldsmith.FactionIdentity;
+import worldsmith.FactionSlots;
 import worldsmith.WsUtil;
 
 import java.util.ArrayList;
@@ -31,6 +34,69 @@ public class Rename implements BaseCommandWithSuggestion {
         WsUtil.printRaw("  rename <new name>                    with a planet's or station's dialog open");
         WsUtil.printRaw("  rename system <system> <new name>    renames a star system, plus its star and planets named after it");
         WsUtil.printRaw("  rename star <star> <new name>        renames only that star");
+        WsUtil.printRaw("  rename faction <faction> <new name>  renames a faction everywhere ('reset' gives back its own name)");
+    }
+
+    /** rename faction <faction> [>] <new name>: the faction is an ID or exact name, the rest is the new name. */
+    private static CommandResult renameFaction(String a) {
+        FactionAPI faction = null;
+        String newName;
+        int gt = a.indexOf('>');
+        if (gt >= 0) {
+            faction = WsUtil.parseFaction(a.substring(0, gt).trim());
+            if (faction == null) return CommandResult.ERROR;
+            newName = cleanNewName(a.substring(gt + 1));
+        } else {
+            List<String> parts = WsUtil.splitArgs(a);
+            int k = parts.size() - 1;
+            for (; k >= 1; k--) {
+                String n = WsUtil.norm(WsUtil.join(parts, 0, k));
+                for (FactionAPI f : Global.getSector().getAllFactions()) {
+                    if (WsUtil.norm(f.getDisplayName()).equals(n) || WsUtil.norm(f.getId()).equals(n)) faction = f;
+                }
+                if (faction != null) break;
+            }
+            if (faction == null) {
+                if (parts.size() < 2) {
+                    WsUtil.print("Give the faction and its new name: rename faction <faction> <new name>");
+                    return CommandResult.BAD_SYNTAX;
+                }
+                k = 1;
+                faction = WsUtil.parseFaction(parts.get(0));
+                if (faction == null) return CommandResult.ERROR;
+            }
+            newName = cleanNewName(WsUtil.join(parts, k, parts.size()));
+        }
+        if (FactionSlots.isUnused(faction)) {
+            WsUtil.print(faction.getId() + " is an unused faction slot; spawnfaction fills it.");
+            return CommandResult.ERROR;
+        }
+        String old = faction.getDisplayName();
+        if (newName.equalsIgnoreCase("reset")) {
+            if (FactionSlots.isSlot(faction)) {
+                WsUtil.print(old + " was created by spawnfaction and has no other name to go back to.");
+                return CommandResult.ERROR;
+            }
+            FactionIdentity.resetName(faction);
+            WsUtil.invalidateCache();
+            WsUtil.print("Renamed " + old + " back to " + faction.getDisplayName() + " (" + faction.getId() + ").");
+            return CommandResult.SUCCESS;
+        }
+        if (newName.isEmpty() || newName.length() > 40) {
+            WsUtil.print("The new name must be 1-40 characters.");
+            return CommandResult.BAD_SYNTAX;
+        }
+        for (FactionAPI f : Global.getSector().getAllFactions()) {
+            if (f != faction && WsUtil.norm(f.getDisplayName()).equals(WsUtil.norm(newName))) {
+                WsUtil.print("There already is a faction called '" + f.getDisplayName() + "'.");
+                return CommandResult.ERROR;
+            }
+        }
+        FactionIdentity.setName(faction, newName);
+        WsUtil.invalidateCache();
+        WsUtil.print("Renamed the faction " + old + " to " + faction.getDisplayName() + " (ID " + faction.getId()
+                + "; 'rename faction " + faction.getId() + " reset' undoes it).");
+        return CommandResult.SUCCESS;
     }
 
     private static String cleanNewName(String s) {
@@ -62,6 +128,9 @@ public class Rename implements BaseCommandWithSuggestion {
         String a = args.trim();
         Mode mode = Mode.ANY;
         List<String> words = WsUtil.splitArgs(a);
+        if (words.size() >= 2 && words.get(0).equalsIgnoreCase("faction")) {
+            return renameFaction(a.substring(words.get(0).length()).trim());
+        }
         if (words.size() >= 2 && (words.get(0).equalsIgnoreCase("system") || words.get(0).equalsIgnoreCase("star"))) {
             mode = words.get(0).equalsIgnoreCase("system") ? Mode.SYSTEM : Mode.STAR;
             a = a.substring(words.get(0).length()).trim();
@@ -322,12 +391,14 @@ public class Rename implements BaseCommandWithSuggestion {
     @Override
     public List<String> getSuggestions(int parameter, List<String> previous, CommandContext context) {
         // Only the current name is completed; the new name is free text.
-        boolean keyword = !previous.isEmpty()
-                && (previous.get(0).equalsIgnoreCase("system") || previous.get(0).equalsIgnoreCase("star"));
+        boolean factionMode = !previous.isEmpty() && previous.get(0).equalsIgnoreCase("faction");
+        boolean keyword = !previous.isEmpty() && (factionMode
+                || previous.get(0).equalsIgnoreCase("system") || previous.get(0).equalsIgnoreCase("star"));
         if (parameter > 1 || (parameter == 1 && !keyword)) return new ArrayList<>();
+        if (factionMode) return WsUtil.factionSuggestions();
         List<String> l = WsUtil.bodySuggestions(WsUtil.Kind.ANY);
         l.addAll(WsUtil.systemSuggestions());
-        if (parameter == 0) l.addAll(WsUtil.list("system", "star"));
+        if (parameter == 0) l.addAll(WsUtil.list("system", "star", "faction"));
         return l;
     }
 }

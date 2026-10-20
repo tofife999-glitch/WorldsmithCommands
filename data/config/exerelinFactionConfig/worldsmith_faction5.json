@@ -1,0 +1,21 @@
+{
+	# Worldsmith Commands faction slot 5. Inactive (not playable) until 'spawnfaction' fills it;
+	# Worldsmith Commands then switches playableFaction on whenever a save with that faction is loaded,
+	# so Nexerelin treats it like any other faction (diplomacy, invasions, alliances, respawning).
+	"playableFaction":false,
+	"startingFaction":false,
+	"enabledByDefault":false,
+	"corvusCompatible":false,
+	"noHomeworld":true,
+	"noRandomStartLocation":true,
+	"noStartingContact":true,
+	"showIntelEvenIfDead":false,
+	"morality":"neutral",
+	"rebelFleetSuffix":"Dissidents",
+	"colonyExpeditionChance":1,
+	"defenceStations":[
+		{"ids":["orbitalstation", "battlestation", "starfortress"], "weight":0.5},
+		{"ids":["orbitalstation_mid", "battlestation_mid", "starfortress_mid"]},
+		{"ids":["orbitalstation_high", "battlestation_high", "starfortress_high"], "weight":0.5},
+	],
+}

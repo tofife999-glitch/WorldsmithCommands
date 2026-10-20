@@ -17,6 +17,7 @@ import org.lazywizard.console.BaseCommandWithSuggestion;
 import org.lazywizard.console.CommonStrings;
 import org.lazywizard.console.Console;
 import org.lwjgl.util.vector.Vector2f;
+import worldsmith.StarTerrain;
 import worldsmith.WsUtil;
 
 import java.util.List;
@@ -190,11 +191,15 @@ public class NewSystem implements BaseCommandWithSuggestion {
 
         StarGenDataSpec data = WsUtil.starData(type);
         float radius = data.getMinRadius() + random.nextFloat() * (data.getMaxRadius() - data.getMinRadius());
-        float corona = radius * (data.getCoronaMult() + data.getCoronaVar() * (random.nextFloat() - 0.5f));
-        if (corona < data.getCoronaMin()) corona = data.getCoronaMin();
+        float corona = StarTerrain.rollCorona(data, radius, random);
         float flare = data.getMinFlare() + (data.getMaxFlare() - data.getMinFlare()) * random.nextFloat();
         PlanetAPI star = sys.initStar("worldsmith_" + Misc.genUID(), type, radius, corona, data.getSolarWind(),
                 flare, data.getCrLossMult());
+        if (StarTerrain.isBlackHole(star) || StarTerrain.isNeutron(star)) {
+            // Event horizon or pulsar beam instead of the plain corona, as the sector generator does it.
+            StarTerrain.remove(sys, star);
+            StarTerrain.add(sys, star, data, corona, random);
+        }
         // Its own name, so the star and the system can't be mixed up (vanilla companions are "<name> B", "C").
         star.setName(name + " Prime");
         sys.setLightColor(Misc.interpolateColor(data.getLightColorMin(), data.getLightColorMax(), random.nextFloat()));

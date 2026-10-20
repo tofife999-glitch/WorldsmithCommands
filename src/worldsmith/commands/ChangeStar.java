@@ -8,21 +8,22 @@ import com.fs.starfarer.api.campaign.SectorEntityToken;
 import com.fs.starfarer.api.campaign.StarSystemAPI;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.impl.campaign.procgen.StarGenDataSpec;
-import com.fs.starfarer.api.impl.campaign.terrain.StarCoronaTerrainPlugin;
 import com.fs.starfarer.api.util.Misc;
 import org.lazywizard.console.BaseCommandWithSuggestion;
 import org.lazywizard.console.CommonStrings;
 import org.lazywizard.console.Console;
 import worldsmith.OrbitCheck;
 import worldsmith.PlanetGen;
+import worldsmith.StarTerrain;
 import worldsmith.WsUtil;
 
-import java.awt.Color;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-/** Changes a system's main star type, with its size, corona and light; optionally rerolls planet conditions. */
+/**
+ * Changes a system's main star type, with its size, corona (or event horizon / pulsar beam) and light; optionally
+ * rerolls planet conditions.
+ */
 public class ChangeStar implements BaseCommandWithSuggestion {
     private static final String USAGE = "changestar [system] <star type> [reroll]";
 
@@ -73,11 +74,6 @@ public class ChangeStar implements BaseCommandWithSuggestion {
             WsUtil.print(sys.getName() + " has no star (nebula).");
             return CommandResult.ERROR;
         }
-        if (WsUtil.isSpecialStar(star.getSpec())) {
-            WsUtil.print(star.getName() + " is a " + star.getSpec().getName()
-                    + "; black holes, neutron stars and pulsars can't be changed (their special effects would stay behind).");
-            return CommandResult.ERROR;
-        }
         if (star.getSpec().getPlanetType().equals(spec.getPlanetType())) {
             WsUtil.print(star.getName() + " already is a " + spec.getName() + ".");
             return CommandResult.ERROR;
@@ -111,17 +107,15 @@ public class ChangeStar implements BaseCommandWithSuggestion {
                     + OrbitCheck.label(innermostThing) + ". Move that further out first (moveplanet).");
             return CommandResult.ERROR;
         }
-        float corona = radius * (data.getCoronaMult() + data.getCoronaVar() * (random.nextFloat() - 0.5f));
-        if (corona < data.getCoronaMin()) corona = data.getCoronaMin();
-        float flare = data.getMinFlare() + (data.getMaxFlare() - data.getMinFlare()) * random.nextFloat();
+        float corona = StarTerrain.rollCorona(data, radius, random);
 
         String oldTypeName = star.getSpec().getName();
         star.changeType(spec.getPlanetType(), random);
         star.setRadius(radius);
-        StarCoronaTerrainPlugin oldCorona = Misc.getCoronaFor(star);
-        if (oldCorona != null) sys.removeEntity(oldCorona.getEntity());
-        sys.addCorona(star, corona, data.getSolarWind(), flare, data.getCrLossMult());
-        sys.setLightColor(lightColor(sys, data, random));
+        // Old corona, event horizon or pulsar beam out; the new type's in.
+        StarTerrain.remove(sys, star);
+        float reach = StarTerrain.add(sys, star, data, corona, random);
+        sys.setLightColor(StarTerrain.systemLight(sys, random));
 
         // Hyperspace jump point names like "Corvus, Yellow Star".
         for (JumpPointAPI jp : WsUtil.hyperJumpPointsInto(sys)) {
@@ -130,8 +124,10 @@ public class ChangeStar implements BaseCommandWithSuggestion {
         }
 
         String extra = "";
-        if (innermost < radius + corona && innermostThing != null)
-            extra += " " + OrbitCheck.label(innermostThing) + " is now inside the star's corona.";
+        if (innermost < reach && innermostThing != null)
+            extra += " " + OrbitCheck.label(innermostThing) + " is now inside the star's "
+                    + (StarTerrain.isBlackHole(star) ? "event horizon." : "corona.");
+        if (StarTerrain.isNeutron(star)) extra += " Its pulsar beam sweeps the whole system.";
         if (reroll) {
             int done = 0;
             int skipped = 0;
@@ -160,21 +156,6 @@ public class ChangeStar implements BaseCommandWithSuggestion {
         WsUtil.print("Changed " + star.getName() + " in " + sys.getName() + " from " + oldTypeName + " to "
                 + spec.getName() + " (" + spec.getPlanetType() + ", radius " + Math.round(radius) + ")." + extra);
         return CommandResult.SUCCESS;
-    }
-
-    /** System light like StarSystemGenerator: the main star's light, blended with any companion stars. */
-    private static Color lightColor(StarSystemAPI sys, StarGenDataSpec mainData, Random random) {
-        Color result = Misc.interpolateColor(mainData.getLightColorMin(), mainData.getLightColorMax(), random.nextFloat());
-        List<PlanetAPI> others = new ArrayList<>();
-        if (sys.getSecondary() != null) others.add(sys.getSecondary());
-        if (sys.getTertiary() != null) others.add(sys.getTertiary());
-        for (PlanetAPI o : others) {
-            StarGenDataSpec d = WsUtil.starData(o.getSpec().getPlanetType());
-            if (d == null) continue;
-            Color c = Misc.interpolateColor(d.getLightColorMin(), d.getLightColorMax(), random.nextFloat());
-            result = Misc.interpolateColor(result, c, 0.5f);
-        }
-        return result;
     }
 
     @Override

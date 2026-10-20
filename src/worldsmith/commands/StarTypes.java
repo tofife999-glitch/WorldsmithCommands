@@ -28,10 +28,11 @@ public class StarTypes implements BaseCommandWithSuggestion {
             count++;
             String entry = "  " + id + " - " + name;
             String lower = (id + " " + name).toLowerCase(Locale.ROOT);
-            if (WsUtil.isSpecialStar(s)) {
-                special.add(entry + " (can't be used by newsystem/changestar)");
-            } else if (!WsUtil.isUsableStarType(s)) {
-                special.add(entry + " (no generator data: can't be used by newsystem/changestar)");
+            if (!WsUtil.isUsableStarType(s)) {
+                special.add(entry + " (no generator data: can't be used by newsystem, changestar or addstar)");
+            } else if (WsUtil.isSpecialStar(s)) {
+                boolean blackHole = s.isBlackHole() || id.toLowerCase(Locale.ROOT).contains("black_hole");
+                special.add(entry + (blackHole ? " (comes with an event horizon)" : " (comes with a pulsar beam)"));
             } else if (lower.contains("giant")) {
                 giants.add(entry);
             } else if (lower.contains("dwarf")) {

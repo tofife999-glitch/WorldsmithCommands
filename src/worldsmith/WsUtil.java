@@ -5,6 +5,7 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.Script;
 import com.fs.starfarer.api.campaign.CampaignUIAPI;
 import com.fs.starfarer.api.campaign.FactionAPI;
+import com.fs.starfarer.api.campaign.InteractionDialogPlugin;
 import com.fs.starfarer.api.campaign.JumpPointAPI;
 import com.fs.starfarer.api.campaign.LocationAPI;
 import com.fs.starfarer.api.campaign.PlanetAPI;
@@ -475,7 +476,12 @@ public final class WsUtil {
         systemNames = Collections.unmodifiableList(sl);
 
         List<String> fl = new ArrayList<>();
-        for (FactionAPI f : sector.getAllFactions()) fl.add(f.getId());
+        for (FactionAPI f : sector.getAllFactions()) {
+            if (FactionSlots.isUnused(f)) continue;
+            fl.add(f.getId());
+            // Factions made with spawnfaction are known by their name, not their slot ID.
+            if (FactionSlots.isSlot(f)) fl.add(token(f.getDisplayName()));
+        }
         Collections.sort(fl);
         factionIds = Collections.unmodifiableList(fl);
     }
@@ -520,7 +526,7 @@ public final class WsUtil {
         return out;
     }
 
-    /** Black holes, neutron stars and pulsars have special terrain this mod doesn't set up. */
+    /** Black holes and neutron stars (pulsars): they come with an event horizon or a pulsar beam instead of a corona. */
     public static boolean isSpecialStar(PlanetSpecAPI s) {
         return s.isBlackHole() || s.isPulsar() || s.getPlanetType().contains("neutron");
     }
@@ -529,9 +535,9 @@ public final class WsUtil {
         return (StarGenDataSpec) Global.getSettings().getSpec(StarGenDataSpec.class, type, true);
     }
 
-    /** Star types that newsystem/changestar can use: normal stars with generator data. */
+    /** Star types that newsystem, changestar and addstar can use: every star type the sector generator can roll. */
     public static boolean isUsableStarType(PlanetSpecAPI s) {
-        return s != null && s.isStar() && !isSpecialStar(s) && starData(s.getPlanetType()) != null;
+        return s != null && (s.isStar() || s.isBlackHole()) && starData(s.getPlanetType()) != null;
     }
 
     /** Resolves a usable star type by ID or display name. Prints a list on ambiguity / suggestions on no match. */
@@ -557,8 +563,8 @@ public final class WsUtil {
         }
         for (PlanetSpecAPI s : starTypes()) {
             if (s.getPlanetType().equalsIgnoreCase(query) || norm(s.getName()).equals(n)) {
-                print("'" + s.getName() + "' (" + s.getPlanetType() + ") is a special star type (black hole, neutron"
-                        + " star or pulsar, or no generator data), which this command can't use.");
+                print("'" + s.getName() + "' (" + s.getPlanetType() + ") has no sector generator data (size, corona,"
+                        + " light), so this command can't build it.");
                 return null;
             }
         }
@@ -723,38 +729,39 @@ public final class WsUtil {
         Global.getSector().addTransientScript(new ConfirmScript(key, question, yesText, noText, retypeHint, onYes, onNo));
     }
 
-    /** Drops a popup that is still waiting, e.g. because the user confirmed by typing "yes" instead. */
+    /**
+     * Opens an option dialog once the console and any other dialog are closed. Dialogs are always closed before
+     * the game saves, and the waiting script is transient, so nothing is written to the save.
+     */
+    public static void openDialog(String key, InteractionDialogPlugin plugin, String retypeHint) {
+        cancelPending(key);
+        Global.getSector().addTransientScript(new DialogScript(key, plugin, retypeHint));
+    }
+
+    /** Drops a popup or dialog that is still waiting, e.g. because the user confirmed by typing "yes" instead. */
     public static void cancelPending(String key) {
         for (EveryFrameScript s : new ArrayList<>(Global.getSector().getTransientScripts())) {
-            if (s instanceof ConfirmScript && ((ConfirmScript) s).key.equals(key)) {
-                ((ConfirmScript) s).done = true;
+            if (s instanceof PendingScript && ((PendingScript) s).key.equals(key)) {
+                ((PendingScript) s).done = true;
                 Global.getSector().removeTransientScript(s);
             }
         }
     }
 
-    private static final class ConfirmScript implements EveryFrameScript {
+    /** Waits until nothing else is on screen, then shows its popup once. */
+    private abstract static class PendingScript implements EveryFrameScript {
         private static final int MAX_TRIES = 600;
-        private final String key;
-        private final String question;
-        private final String yesText;
-        private final String noText;
+        final String key;
         private final String retypeHint;
-        private final Script onYes;
-        private final Script onNo;
-        private boolean done = false;
+        boolean done = false;
         private int failedTries = 0;
 
-        ConfirmScript(String key, String question, String yesText, String noText, String retypeHint,
-                      Script onYes, Script onNo) {
+        PendingScript(String key, String retypeHint) {
             this.key = key;
-            this.question = question;
-            this.yesText = yesText;
-            this.noText = noText;
             this.retypeHint = retypeHint;
-            this.onYes = onYes;
-            this.onNo = onNo;
         }
+
+        abstract boolean show(CampaignUIAPI ui);
 
         @Override
         public boolean isDone() {
@@ -773,22 +780,59 @@ public final class WsUtil {
             if (ui == null || ui.isShowingDialog() || ui.isShowingMenu()) return;
             boolean shown;
             try {
-                Script no = onNo != null ? onNo : new Script() {
-                    @Override
-                    public void run() {
-                    }
-                };
-                shown = ui.showConfirmDialog(question, yesText, noText, onYes, no);
+                shown = show(ui);
             } catch (Exception ex) {
-                Global.getLogger(WsUtil.class).warn("Worldsmith: confirm dialog failed", ex);
+                Global.getLogger(WsUtil.class).warn("Worldsmith: popup failed", ex);
                 shown = false;
             }
             if (shown) {
                 done = true;
             } else if (++failedTries >= MAX_TRIES) {
                 done = true;
-                ui.addMessage("Worldsmith: could not show the confirmation. Type instead: " + retypeHint);
+                ui.addMessage("Worldsmith: could not show the popup. Type instead: " + retypeHint);
             }
+        }
+    }
+
+    private static final class ConfirmScript extends PendingScript {
+        private final String question;
+        private final String yesText;
+        private final String noText;
+        private final Script onYes;
+        private final Script onNo;
+
+        ConfirmScript(String key, String question, String yesText, String noText, String retypeHint,
+                      Script onYes, Script onNo) {
+            super(key, retypeHint);
+            this.question = question;
+            this.yesText = yesText;
+            this.noText = noText;
+            this.onYes = onYes;
+            this.onNo = onNo;
+        }
+
+        @Override
+        boolean show(CampaignUIAPI ui) {
+            Script no = onNo != null ? onNo : new Script() {
+                @Override
+                public void run() {
+                }
+            };
+            return ui.showConfirmDialog(question, yesText, noText, onYes, no);
+        }
+    }
+
+    private static final class DialogScript extends PendingScript {
+        private final InteractionDialogPlugin plugin;
+
+        DialogScript(String key, InteractionDialogPlugin plugin, String retypeHint) {
+            super(key, retypeHint);
+            this.plugin = plugin;
+        }
+
+        @Override
+        boolean show(CampaignUIAPI ui) {
+            return ui.showInteractionDialog(plugin, Global.getSector().getPlayerFleet());
         }
     }
 

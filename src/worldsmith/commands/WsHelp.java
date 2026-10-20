@@ -40,17 +40,16 @@ public class WsHelp implements BaseCommandWithSuggestion {
                         + "  owner:<faction> colonies of that faction\n"
                         + "  all             also search planets you haven't surveyed (shows their conditions)\n"
                         + "Example: findplanet habitable farmland -toxic_atmosphere hazard<150 within:20");
-        TOPICS.put("addobject",
-                "addobject <type> places an object at your position, orbiting the star:\n"
-                        + "  stable_location   an empty stable orbit; you can build a relay, buoy or array there\n"
+        TOPICS.put("objects",
+                "removeobject [type|name] removes one of these (asks first):\n"
+                        + "  stable_location   an empty stable orbit; a relay, buoy or array can be built there\n"
                         + "  comm_relay        helps the stability of colonies in the system\n"
                         + "  nav_buoy          makes fleets travel faster in the system\n"
                         + "  sensor_array      gives better sensor range in the system\n"
                         + "  ..._makeshift     weaker player-built versions of the three above\n"
-                        + "  inactive_gate     a gate; it works like other gates once you can activate gates\n"
-                        + "Relays, buoys and arrays help whoever owns them; they start unclaimed, so you claim them\n"
-                        + "like any other.\n"
-                        + "Short names work too: stable, relay, buoy, sensor, gate. Remove with removeobject.");
+                        + "  inactive_gate     a gate of the gate network\n"
+                        + "Short names work too: stable, relay, buoy, sensor, gate. Without a name it removes the\n"
+                        + "nearest one in your system. To add objects, use Additional Console Commands' addentity.");
         TOPICS.put("addring",
                 "addring [planet] <belt|dust|ice|magfield> adds terrain that works like vanilla's:\n"
                         + "  belt       an asteroid belt with asteroids\n"
@@ -74,11 +73,14 @@ public class WsHelp implements BaseCommandWithSuggestion {
                         + "rename system <system> <new name>    a whole star system: its star and planets named\n"
                         + "                                     after it (Glith I -> Hakeball I) are renamed too\n"
                         + "rename star <star> <new name>        only that star\n"
+                        + "rename faction <faction> <new name>  a faction, everywhere its name appears; 'reset' as\n"
+                        + "                                     the new name gives back its own name\n"
                         + "Typing a system's name without 'system' also renames the system when its star has the\n"
                         + "same name.");
         TOPICS.put("remove",
                 "removeplanet <planet> and removemoon <moon>: delete an uninhabited planet or moon (asks first).\n"
                         + "  Refuses colonies (use destroycolony in its dialog first) and planets other things orbit.\n"
+                        + "  It also removes the second or third star of a system (never the main star).\n"
                         + "removering: removes the belt, ring or magnetic field around the star nearest to your\n"
                         + "  position. removering <planet> removes all of that planet's rings; add belt, ring or\n"
                         + "  magfield to remove only that kind.\n"
@@ -87,11 +89,25 @@ public class WsHelp implements BaseCommandWithSuggestion {
                         + "  removeobject <name or ID> a specific one.");
         TOPICS.put("newsystem",
                 "newsystem <name> [star type] [full|empty]: in hyperspace, creates a star system at your\n"
-                        + "position. Without a star type it picks one at random ('startypes' lists them). A popup asks\n"
-                        + "whether to generate planets, moons, rings and stable locations like a random system, or\n"
-                        + "keep it empty; 'full' or 'empty' answers that in advance. The star is named\n"
-                        + "'<name> Prime' so it can't be mixed up with the system. It must be at least 1.5\n"
-                        + "light-years from other systems.");
+                        + "position. Without a star type it picks one at random ('startypes' lists them); black holes\n"
+                        + "and neutron stars work too. A popup asks whether to generate planets, moons, rings and\n"
+                        + "stable locations like a random system, or keep it empty; 'full' or 'empty' answers that in\n"
+                        + "advance. The star is named '<name> Prime' so it can't be mixed up with the system. It must\n"
+                        + "be at least 1.5 light-years from other systems.");
+        TOPICS.put("stars",
+                "changestar [system] <star type> [reroll]: changes a system's main star. 'reroll' also rerolls\n"
+                        + "  the conditions of uncolonized planets for the new star.\n"
+                        + "addstar [star type] [name]: adds a companion star at your position, orbiting the main\n"
+                        + "  star; the system becomes a binary (or, with a third star, trinary) system. Remove it\n"
+                        + "  again with removeplanet.\n"
+                        + "Black holes get an event horizon (it pulls fleets in) and neutron stars a pulsar beam (it\n"
+                        + "  sweeps the system and drains combat readiness), like in randomly generated systems.\n"
+                        + "recolor [planet] <color>: tints a planet, moon or star (red, teal, purple... or #RRGGBB,\n"
+                        + "  random, reset). Only the look changes.");
+        TOPICS.put("hyperspace",
+                "hyperclouds clear [radius]: removes the hyperspace clouds and storms around you.\n"
+                        + "hyperclouds add [radius]: grows new clouds around you; storms form in them over time.\n"
+                        + "The radius is in light-years (0.5-5, default 1). Star systems keep their clear space.");
         TOPICS.put("factions",
                 "factionpower <faction>: colonies, stability, unrest, disrupted industries, garrison damage,\n"
                         + "  Nexerelin invasion points (attacks happen when these build up) and troop reserves, plus any\n"
@@ -107,7 +123,44 @@ public class WsHelp implements BaseCommandWithSuggestion {
                         + "  Strengthen 1: clears unrest and disruptions, lifts Worldsmith growth freezes.\n"
                         + "  Strengthen 2: + repaired garrisons, more troop reserves and invasion points,\n"
                         + "                stability +2 for 6 months.\n"
-                        + "  Strengthen 3: + stability +3 fading by 1 per year, many more invasion points.");
+                        + "  Strengthen 3: + stability +3 fading by 1 per year, many more invasion points.\n"
+                        + "New factions, flags and lore: see 'wshelp newfaction'.");
+        TOPICS.put("newfaction",
+                "spawnfaction <name> [here|random] [small|medium|large] [color] [like <faction>]\n"
+                        + "  Founds a new faction. A popup asks where (your system or a random empty place) and how\n"
+                        + "  big (small: 1 colony, medium: 3, large: 5), then shows the planets before anything\n"
+                        + "  happens ('Pick another place' rolls again). It gets a random player flag, empty lore,\n"
+                        + "  and the ships and tactics of an existing faction ('like hegemony', otherwise random).\n"
+                        + "  Nexerelin runs it like any other faction: diplomacy, wars, invasions, alliances.\n"
+                        + "  There are 8 slots, one per color; 'spawnfaction list' shows them. A slot frees up again\n"
+                        + "  once its faction has no colonies left.\n"
+                        + "factionflag <faction> [random|<number>|<other faction>|reset]: any faction's flag.\n"
+                        + "  'factionflag list' numbers the player flags.\n"
+                        + "factionlore <faction> <text>: the text on its Intel faction page. 'add <text>' adds a\n"
+                        + "  paragraph, a | starts a new paragraph, 'reset' restores it. Don't use ; in the text (the\n"
+                        + "  console splits commands at ;).\n"
+                        + "rename faction <faction> <new name>: renames any faction.\n"
+                        + "Note: once a save has run with this mod, keep the mod installed for that save.");
+        TOPICS.put("war",
+                "wars [faction]: who is at war with whom, alliances and war weariness; with a faction, its\n"
+                        + "  relations with everyone.\n"
+                        + "totalwar [withplayer]: every faction with colonies at war with every other; alliances\n"
+                        + "  break up. You stay out unless 'withplayer' (a commission ties you to your employer).\n"
+                        + "totalpeace [all] [withplayer]: everyone at peace; pirates only with 'all'.\n"
+                        + "Already in other mods, for one pair of factions:\n"
+                        + "  setrelation / adjustrelation <faction> [other] <amount>   (Console Commands)\n"
+                        + "  creatediplomacyevent <a> <b> declare_war|peace_treaty|ceasefire   (Nexerelin)\n"
+                        + "  createalliance <a> <b>, leavealliance <faction>, spawninvasionfleet,\n"
+                        + "  spawnraidfleet, setmarketowner   (Nexerelin)");
+        TOPICS.put("apocalypse",
+                "apocalypse <remnant|bombard|revolution> [all]: asks Yes/Cancel first.\n"
+                        + "  remnant     a Remnant armada jumps into every inhabited system, attacks its fleets and\n"
+                        + "              stations for about two months, then withdraws and vanishes.\n"
+                        + "  bombard     every colony is saturation-bombed into ruins; story-critical worlds survive.\n"
+                        + "              This can't be undone.\n"
+                        + "  revolution  Nexerelin rebellions break out in every colony of size 3 or more. Rebels\n"
+                        + "              that win take the colony over (or make it independent).\n"
+                        + "Your own colonies are spared unless you add 'all'. Save first.");
     }
 
     @Override
@@ -121,7 +174,8 @@ public class WsHelp implements BaseCommandWithSuggestion {
         if (key == null) {
             StringBuilder sb = new StringBuilder();
             sb.append(WsUtil.PREFIX).append("Worldsmith help. Type 'wshelp <topic>':\n");
-            sb.append("  names, findplanet, conditions, addobject, addring, resize, rename, remove, newsystem, factions\n");
+            sb.append("  names, findplanet, conditions, objects, addring, resize, rename, remove, newsystem,\n");
+            sb.append("  stars, hyperspace, factions, newfaction, war, apocalypse\n");
             sb.append("'help worldsmith' lists all commands; 'help <command>' explains one command.");
             if (!a.isEmpty()) sb.insert(0, WsUtil.PREFIX + "No help topic '" + a + "'.\n");
             Console.showMessage(sb.toString());
@@ -136,12 +190,18 @@ public class WsHelp implements BaseCommandWithSuggestion {
         if (TOPICS.containsKey(a)) return a;
         switch (a) {
             case "filters": case "filter": case "search": return "findplanet";
-            case "objects": case "object": case "removeobject": return "addobject";
+            case "object": case "removeobject": case "addobject": case "addentity": return "objects";
             case "rings": case "ring": case "belt": return "addring";
             case "resizeplanet": case "size": case "sizes": return "resize";
             case "removeplanet": case "removering": case "removemoon": case "removing": return "remove";
             case "system": case "systems": return "newsystem";
+            case "star": case "changestar": case "addstar": case "recolor": case "color": case "colors": return "stars";
+            case "hyperclouds": case "clouds": case "storms": return "hyperspace";
             case "faction": case "factionpower": case "weakenfaction": case "strengthenfaction": return "factions";
+            case "spawnfaction": case "factionflag": case "factionlore": case "flag": case "flags": case "lore":
+                return "newfaction";
+            case "wars": case "totalwar": case "totalpeace": case "peace": case "diplomacy": return "war";
+            case "remnant": case "bombard": case "revolution": return "apocalypse";
             default: return null;
         }
     }

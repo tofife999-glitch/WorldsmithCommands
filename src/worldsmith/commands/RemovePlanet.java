@@ -15,10 +15,12 @@ import com.fs.starfarer.api.campaign.SectorEntityToken;
 import com.fs.starfarer.api.campaign.StarSystemAPI;
 import com.fs.starfarer.api.impl.campaign.ids.MemFlags;
 import com.fs.starfarer.api.impl.campaign.ids.Tags;
+import com.fs.starfarer.api.impl.campaign.procgen.StarSystemGenerator;
 import com.fs.starfarer.api.impl.campaign.terrain.BaseRingTerrain;
 import org.lazywizard.console.BaseCommandWithSuggestion;
 import org.lazywizard.console.CommonStrings;
 import org.lazywizard.console.Console;
+import worldsmith.StarTerrain;
 import worldsmith.WsUtil;
 
 import java.util.ArrayList;
@@ -26,10 +28,12 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 /**
- * Deletes an uninhabited planet or moon. Never picks a target by itself and always asks for confirmation.
+ * Deletes an uninhabited planet or moon, or the second or third star of a system. Never picks a target by
+ * itself and always asks for confirmation.
  */
 public class RemovePlanet implements BaseCommandWithSuggestion {
     private static final String USAGE = "removeplanet <planet>   (always asks for confirmation)";
@@ -70,7 +74,9 @@ public class RemovePlanet implements BaseCommandWithSuggestion {
             WsUtil.print("Usage: " + USAGE);
             return CommandResult.BAD_SYNTAX;
         }
-        SectorEntityToken e = WsUtil.findBody(name, WsUtil.Kind.PLANET, "planet or moon");
+        List<SectorEntityToken> companions = WsUtil.exactMatches(name, companionStars());
+        SectorEntityToken e = companions.size() == 1 ? companions.get(0)
+                : WsUtil.findBody(name, WsUtil.Kind.PLANET, "planet or moon");
         if (e == null) return CommandResult.ERROR;
         final PlanetAPI planet = (PlanetAPI) e;
 
@@ -112,6 +118,16 @@ public class RemovePlanet implements BaseCommandWithSuggestion {
             }
         });
         return CommandResult.SUCCESS;
+    }
+
+    /** Second and third stars of binary and trinary systems; unlike main stars, these can be removed. */
+    private static List<SectorEntityToken> companionStars() {
+        List<SectorEntityToken> out = new ArrayList<>();
+        for (StarSystemAPI s : Global.getSector().getStarSystems()) {
+            if (s.getSecondary() != null) out.add(s.getSecondary());
+            if (s.getTertiary() != null) out.add(s.getTertiary());
+        }
+        return out;
     }
 
     private static boolean isDialogOpenWith(SectorEntityToken e) {
@@ -169,8 +185,8 @@ public class RemovePlanet implements BaseCommandWithSuggestion {
         Plan p = new Plan();
         p.planet = planet;
         LocationAPI loc = planet.getContainingLocation();
-        if (planet.isStar()) {
-            p.blockers.add("it is a star.");
+        if (planet.isStar() && !companionStars().contains(planet)) {
+            p.blockers.add("it is the main star of its system; change its type with changestar instead.");
             return p;
         }
         if (!(loc instanceof StarSystemAPI) || !loc.getAllEntities().contains(planet)) {
@@ -309,6 +325,17 @@ public class RemovePlanet implements BaseCommandWithSuggestion {
         }
         for (CampaignFleetAPI f : p.fleets) f.setOrbit(null);
         sys.removeEntity(planet);
+        if (planet == sys.getSecondary()) {
+            sys.setSecondary(sys.getTertiary());
+            sys.setTertiary(null);
+        } else if (planet == sys.getTertiary()) {
+            sys.setTertiary(null);
+        }
+        if (planet.isStar()) {
+            sys.setType(sys.getSecondary() == null ? StarSystemGenerator.StarSystemType.SINGLE
+                    : StarSystemGenerator.StarSystemType.BINARY_FAR);
+            sys.setLightColor(StarTerrain.systemLight(sys, new Random()));
+        }
         WsUtil.invalidateCache();
         return "Removed " + planet.getName() + " (" + planet.getSpec().getName() + ") from " + sys.getName() + "."
                 + (also.isEmpty() ? "" : " Also removed: " + String.join(", ", also) + ".");
@@ -316,7 +343,11 @@ public class RemovePlanet implements BaseCommandWithSuggestion {
 
     @Override
     public List<String> getSuggestions(int parameter, List<String> previous, CommandContext context) {
-        if (parameter == 0) return WsUtil.bodySuggestions(WsUtil.Kind.UNCOLONIZED);
+        if (parameter == 0) {
+            List<String> l = WsUtil.bodySuggestions(WsUtil.Kind.UNCOLONIZED);
+            for (SectorEntityToken s : companionStars()) l.add(WsUtil.token(s.getName()));
+            return l;
+        }
         return WsUtil.list("yes");
     }
 }
