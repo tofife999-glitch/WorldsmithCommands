@@ -244,4 +244,4 @@ Already in other mods:
 blank faction slots (for `spawnfaction`) to the save. All changes stay in the save, and planets turned
 into a modded type need that mod installed.
 
-MIT license. Credits: LazyWizard (Console Commands, LazyLib), Histidine (Nexerelin).
+MIT license. Credits: LazyWizard and Lukas04 (Console Commands), LazyWizard (LazyLib), Histidine (Nexerelin).
