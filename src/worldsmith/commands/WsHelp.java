@@ -66,12 +66,10 @@ public class WsHelp implements BaseCommandWithSuggestion {
                         + "around a planet hugs the planet. It refuses if it would overlap another orbit.\n"
                         + "Remove with removering.");
         TOPICS.put("resize",
-                "resizeplanet [planet] <size|percent|auto>. The size is the planet's radius, in the same units\n"
-                        + "as orbit distances; planetinfo shows the current size. Keeping the same number changes\n"
-                        + "nothing; twice the number (or 200%) makes it twice as wide, 50% half as wide.\n"
-                        + "Vanilla sizes: rocky and habitable planets about 90-220, gas giants 250-400, moons\n"
-                        + "usually 60-150. Allowed: 30-1000. 'auto' picks a normal size for the planet's type.\n"
-                        + "Examples: resizeplanet Corvus_IV 200   resizeplanet Corvus_IV 150%   resizeplanet Corvus_IV auto");
+                "resizeplanet [planet] <percent|auto>: makes a planet wider or narrower.\n"
+                        + "150% = 1.5 times as wide, 200% = twice as wide, 50% = half as wide.\n"
+                        + "'auto' gives it a normal size for its type.\n"
+                        + "Examples: resizeplanet Corvus_IV 150%   resizeplanet Corvus_IV auto");
         TOPICS.put("rename",
                 "rename <current name> <new name>     e.g. rename Glith_I Hakeball\n"
                         + "rename <current name> > <new name>   use > if you're unsure where the current name ends\n"
@@ -100,6 +98,16 @@ public class WsHelp implements BaseCommandWithSuggestion {
                         + "stable locations like a random system, or keep it empty; 'full' or 'empty' answers that in\n"
                         + "advance. It gets an inner and a fringe jump point plus the star's own. The star is named\n"
                         + "'<name> Prime'. It must be at least 1.5 light-years from other systems.");
+        TOPICS.put("orbit",
+                "orbit <planet>: which way it circles and how many days one orbit takes.\n"
+                        + "orbit <planet> distance 150%: 1.5 times as far out (50% = half as far). It keeps its\n"
+                        + "  speed, so a wider orbit takes longer.\n"
+                        + "orbit <planet> speed 200%: twice as fast (50% = half as fast).\n"
+                        + "orbit <planet> reverse: circles the other way.\n"
+                        + "orbit <moon> tidallock: the moon always stays behind its planet, away from the star, in\n"
+                        + "  the planet's shadow. Planets block a neutron star's pulsar beam, so it never reaches the\n"
+                        + "  moon. 'speed' or 'reverse' ends the lock.\n"
+                        + "Options can be combined. Moons, stations and rings move with their planet.");
         TOPICS.put("stars",
                 "addstar [star type] [name]: adds a companion star at your position, orbiting the main\n"
                         + "  star; the system becomes a binary (or, with a third star, trinary) system. Remove it\n"
@@ -165,6 +173,10 @@ public class WsHelp implements BaseCommandWithSuggestion {
                         + "  system's biggest colony for about two months, then leaves. Without a war, only the\n"
                         + "  armada turns hostile for the attack.\n"
                         + "rebellion [colony] [backing faction]: a Nexerelin rebellion in one colony.\n"
+                        + "warfocus <faction> <enemy> [days]: it aims all its invasions and raids at that enemy\n"
+                        + "  (default 180 days, or until peace). warfocus lists them; 'off' ends one.\n"
+                        + "expeditions [faction] [off|on|often|reset]: how often it sends colony expeditions;\n"
+                        + "  without options, every faction's share.\n"
                         + "Already in other mods, for one pair of factions:\n"
                         + "  setrelation / adjustrelation <faction> [other] <amount>   (Console Commands)\n"
                         + "  creatediplomacyevent <a> <b> declare_war|peace_treaty|ceasefire   (Nexerelin)\n"
@@ -222,7 +234,9 @@ public class WsHelp implements BaseCommandWithSuggestion {
             case "factionships": case "factiondoctrine": case "factionpersonality": case "doctrine":
             case "personality": return "newfaction";
             case "wars": case "totalwar": case "totalpeace": case "peace": case "diplomacy": case "armada":
-            case "rebellion": return "war";
+            case "rebellion": case "warfocus": case "focus": case "invasion": case "invasions":
+            case "expeditions": case "expedition": case "colonies": return "war";
+            case "orbits": case "tidallock": case "tidal": case "lock": return "orbit";
             case "remnant": case "bombard": case "revolution": return "apocalypse";
             default: return null;
         }

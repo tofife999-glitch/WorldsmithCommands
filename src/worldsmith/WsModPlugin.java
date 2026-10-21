@@ -5,7 +5,7 @@ import com.fs.starfarer.api.Global;
 
 /**
  * Re-applies what the game does not keep by itself when a save loads: spawned factions' Nexerelin settings,
- * ships and doctrine, and faction lore. The plugin itself is never stored in the save.
+ * ships and doctrine, faction lore, colony expedition settings and war focuses. The plugin itself is never stored in the save.
  */
 public class WsModPlugin extends BaseModPlugin {
     @Override
@@ -19,6 +19,11 @@ public class WsModPlugin extends BaseModPlugin {
             FactionIdentity.onGameLoad();
         } catch (Exception ex) {
             Global.getLogger(WsModPlugin.class).error("Worldsmith: could not restore faction lore and flags", ex);
+        }
+        try {
+            NexPlans.onGameLoad();
+        } catch (Exception ex) {
+            Global.getLogger(WsModPlugin.class).error("Worldsmith: could not restore colony expeditions and war focuses", ex);
         }
     }
 }

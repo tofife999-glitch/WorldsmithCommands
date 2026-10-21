@@ -227,10 +227,7 @@ public final class FactionCharacter {
     }
 
     private static void setExpansion(FactionAPI f, Float chance) {
-        if (chance == null) f.getMemoryWithoutUpdate().unset(MEM_EXPANSION);
-        else f.getMemoryWithoutUpdate().set(MEM_EXPANSION, chance);
-        NexFactionConfig conf = NexConfig.getFactionConfig(f.getId(), false);
-        if (conf != null) conf.colonyExpeditionChance = chance == null ? 1f : chance;
+        NexPlans.setExpansion(f, chance);
     }
 
     /** Applies a personality; returns what changed, in a few words. */
@@ -268,7 +265,7 @@ public final class FactionCharacter {
         FactionAPI template = FactionSlots.template(f);
         List<String> doctrine = doctrinePresets(f);
         String expansion = !mem.contains(MEM_EXPANSION) ? "normal"
-                : mem.getFloat(MEM_EXPANSION) > 1f ? "expansionist" : "isolationist";
+                : mem.getFloat(MEM_EXPANSION) <= 0f ? "isolationist" : mem.getFloat(MEM_EXPANSION) > 1.5f ? "expansionist" : "normal";
         return "ships " + (ships != null ? ships : "like " + (template != null ? template.getDisplayNameWithArticle() : "?"))
                 + "; doctrine " + (doctrine.isEmpty() ? "as its model faction" : String.join(", ", doctrine))
                 + "; " + temperament(f) + (mem.getBoolean(MEM_PIRATE) ? ", pirate" : "") + ", expansion " + expansion;

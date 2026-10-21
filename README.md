@@ -54,10 +54,20 @@ and `wshelp` has plain-language topics.
 - `addmoon <planet> [type|random] [name]`: a moon at your distance from the planet, or in its first
   free orbit.
 - `moveplanet <planet>`: moves it, with its moons, to your distance and angle.
-- `resizeplanet [planet] <size>`: the size is the planet's radius (`planetinfo` shows it).
-  - a number: the new radius. Rocky planets are about 90-220, gas giants 250-400.
-  - a percentage: `200%` makes it twice as wide, `50%` half as wide
+- `resizeplanet [planet] <percent|auto>`: makes it wider or narrower.
+  - a percentage: `150%` makes it 1.5 times as wide, `200%` twice as wide, `50%` half as wide
   - `auto`: a normal size for its type
+- `orbit [planet] [options]`: changes the orbit of a planet, moon or companion star. Without options it shows
+  which way it circles and how many days one orbit takes. Options can be combined:
+  - `distance 150%`: 1.5 times as far out (`50%` = half as far). It keeps its speed, so a wider orbit takes
+    longer.
+  - `speed 200%`: twice as fast (`50%` = half as fast)
+  - `reverse`: circles the other way
+  - `tidallock`: for moons. The moon always stays behind its planet, away from the star, in the planet's
+    shadow, where a neutron star's pulsar beam can't reach it. `speed` or `reverse` ends the lock.
+
+  Moons, stations and rings move with it. Example: `orbit Corvus_V distance 150%`, then
+  `orbit Corvus_VA tidallock`.
 - `popcap [colony] <size|off>`: the colony stops growing at that size. It never shrinks a colony.
   - `off`: removes the cap
 - `treatasnpccolony [colony] [off]`: Nexerelin treats it like its own expedition colonies: the AI
@@ -202,6 +212,19 @@ setting, and every setting stays in the save.
   the one you are in), attacks its biggest colony for about two months, then leaves. If the two factions
   aren't at war, only the armada turns hostile; no war is declared.
   - `small` / `medium` / `large`: its size (medium if you leave it out)
+- `warfocus <faction> <enemy> [days]`: the faction aims all its Nexerelin invasions and raids at that
+  enemy, for 180 days or the days you give (30-1825), or until they make peace. It spends the faction's own
+  invasion points, so it doesn't add invasions; they must already be at war.
+  - no options: lists the war focuses
+  - only a faction: its focus and how close it is to the next invasion
+  - `off`: it picks its targets by itself again
+- `expeditions [faction] [option]`: how often a faction sends Nexerelin colony expeditions. Nexerelin sends
+  one every few months and picks the faction by share.
+  - no options: every faction's share
+  - `off`: it sends none
+  - `on`: a normal share, also for factions that normally never expand
+  - `often`: three times that
+  - `reset`: its own share again
 - `rebellion [colony] [faction]`: a Nexerelin rebellion in one colony. The rebels fight for the faction
   you name, or for one Nexerelin picks, or for independence. If they win, the colony changes hands.
 
