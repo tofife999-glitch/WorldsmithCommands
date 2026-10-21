@@ -227,7 +227,9 @@ public final class FactionCharacter {
     }
 
     private static void setExpansion(FactionAPI f, Float chance) {
-        NexPlans.setExpansion(f, chance);
+        if (chance == null) f.getMemoryWithoutUpdate().unset(MEM_EXPANSION);
+        else f.getMemoryWithoutUpdate().set(MEM_EXPANSION, chance);
+        ExpeditionShares.apply();
     }
 
     /** Applies a personality; returns what changed, in a few words. */
@@ -290,6 +292,7 @@ public final class FactionCharacter {
         f.getMemoryWithoutUpdate().unset(MEM_DOCTRINE);
         f.getMemoryWithoutUpdate().unset(MEM_PIRATE);
         setTemperament(f, null);
+        f.getMemoryWithoutUpdate().unset(ExpeditionShares.MEM_SHARE);
         setExpansion(f, null);
         reset(f);
     }

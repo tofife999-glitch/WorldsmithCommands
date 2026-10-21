@@ -4,8 +4,8 @@ Worldsmith Console Commands - changelog
 - New orbit command: move a planet, moon or companion star farther out or closer and make it faster or
   slower (in percent), or reverse it. 'tidallock' keeps a moon behind its planet, in its shadow, where
   a pulsar beam can't reach it.
-- New warfocus command: a faction aims all its Nexerelin invasions and raids at one enemy for a while.
-- New expeditions command: how often a faction sends Nexerelin colony expeditions (off, on, often).
+- New expeditions command: see every faction's share of Nexerelin's colony expeditions, set any faction's
+  share in percent (or switch it off), and make expeditions come more or less often.
 - resizeplanet takes only percentages now (150% = 1.5 times as wide) or 'auto'.
 - wshelp has a new 'orbit' topic.
 

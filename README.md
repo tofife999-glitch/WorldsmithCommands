@@ -197,6 +197,15 @@ setting, and every setting stays in the save.
   - `1`: clears unrest and disruptions, lifts Worldsmith growth freezes
   - `2`: also repairs garrisons, adds troops and invasion points, +2 stability for 6 months
   - `3`: also +3 stability fading by 1 a year, and many more invasion points
+- `expeditions [option]`: Nexerelin's colony expeditions. Nexerelin sends one every few months and picks the
+  faction by share.
+  - no options: every faction's share and how often expeditions come
+  - `<faction> 30%`: that faction sends 30% of all expeditions; the others share the rest in their usual
+    proportions. `100%` = only that faction.
+  - `<faction> off`: it sends none
+  - `<faction> reset`: its usual share again
+  - `frequency 200%`: expeditions come twice as often (`50%` = half as often)
+  - `reset`: everything back to normal
 
 ## War and peace
 
@@ -212,19 +221,6 @@ setting, and every setting stays in the save.
   the one you are in), attacks its biggest colony for about two months, then leaves. If the two factions
   aren't at war, only the armada turns hostile; no war is declared.
   - `small` / `medium` / `large`: its size (medium if you leave it out)
-- `warfocus <faction> <enemy> [days]`: the faction aims all its Nexerelin invasions and raids at that
-  enemy, for 180 days or the days you give (30-1825), or until they make peace. It spends the faction's own
-  invasion points, so it doesn't add invasions; they must already be at war.
-  - no options: lists the war focuses
-  - only a faction: its focus and how close it is to the next invasion
-  - `off`: it picks its targets by itself again
-- `expeditions [faction] [option]`: how often a faction sends Nexerelin colony expeditions. Nexerelin sends
-  one every few months and picks the faction by share.
-  - no options: every faction's share
-  - `off`: it sends none
-  - `on`: a normal share, also for factions that normally never expand
-  - `often`: three times that
-  - `reset`: its own share again
 - `rebellion [colony] [faction]`: a Nexerelin rebellion in one colony. The rebels fight for the faction
   you name, or for one Nexerelin picks, or for independence. If they win, the colony changes hands.
 

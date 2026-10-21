@@ -139,6 +139,11 @@ public class WsHelp implements BaseCommandWithSuggestion {
                         + "  Strengthen 2: + repaired garrisons, more troop reserves and invasion points,\n"
                         + "                stability +2 for 6 months.\n"
                         + "  Strengthen 3: + stability +3 fading by 1 per year, many more invasion points.\n"
+                        + "expeditions: every faction's share of Nexerelin's colony expeditions.\n"
+                        + "  expeditions <faction> 30%: it sends 30% of them; the others share the rest as before.\n"
+                        + "  expeditions <faction> off / reset: it sends none / its usual share again.\n"
+                        + "  expeditions frequency 200%: twice as many expeditions (50% = half as many).\n"
+                        + "  expeditions reset: everything back to normal.\n"
                         + "New factions, flags and lore: see 'wshelp newfaction'.");
         TOPICS.put("newfaction",
                 "spawnfaction <name> [here|random] [small|medium|large] [color] [like <faction>]\n"
@@ -173,10 +178,6 @@ public class WsHelp implements BaseCommandWithSuggestion {
                         + "  system's biggest colony for about two months, then leaves. Without a war, only the\n"
                         + "  armada turns hostile for the attack.\n"
                         + "rebellion [colony] [backing faction]: a Nexerelin rebellion in one colony.\n"
-                        + "warfocus <faction> <enemy> [days]: it aims all its invasions and raids at that enemy\n"
-                        + "  (default 180 days, or until peace). warfocus lists them; 'off' ends one.\n"
-                        + "expeditions [faction] [off|on|often|reset]: how often it sends colony expeditions;\n"
-                        + "  without options, every faction's share.\n"
                         + "Already in other mods, for one pair of factions:\n"
                         + "  setrelation / adjustrelation <faction> [other] <amount>   (Console Commands)\n"
                         + "  creatediplomacyevent <a> <b> declare_war|peace_treaty|ceasefire   (Nexerelin)\n"
@@ -234,8 +235,8 @@ public class WsHelp implements BaseCommandWithSuggestion {
             case "factionships": case "factiondoctrine": case "factionpersonality": case "doctrine":
             case "personality": return "newfaction";
             case "wars": case "totalwar": case "totalpeace": case "peace": case "diplomacy": case "armada":
-            case "rebellion": case "warfocus": case "focus": case "invasion": case "invasions":
-            case "expeditions": case "expedition": case "colonies": return "war";
+            case "rebellion": return "war";
+            case "expeditions": case "expedition": case "colonies": return "factions";
             case "orbits": case "tidallock": case "tidal": case "lock": return "orbit";
             case "remnant": case "bombard": case "revolution": return "apocalypse";
             default: return null;
