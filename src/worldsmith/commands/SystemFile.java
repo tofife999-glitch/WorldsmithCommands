@@ -17,6 +17,7 @@ import com.fs.starfarer.api.campaign.econ.MarketConditionAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Entities;
 import com.fs.starfarer.api.impl.campaign.ids.Factions;
 import com.fs.starfarer.api.impl.campaign.ids.Terrain;
+import com.fs.starfarer.api.impl.campaign.procgen.ConditionGenDataSpec;
 import com.fs.starfarer.api.impl.campaign.procgen.StarAge;
 import com.fs.starfarer.api.impl.campaign.procgen.StarGenDataSpec;
 import com.fs.starfarer.api.impl.campaign.procgen.StarSystemGenerator;
@@ -90,6 +91,56 @@ final class SystemFile {
         return FOLDER + file + ".json";
     }
 
+    private static final String INDEX = FOLDER + "exports.json";
+
+    /** The exports made with exportsystem that still exist, as {file, system name}, newest first. */
+    static List<String[]> knownExports() {
+        List<String[]> out = new ArrayList<>();
+        try {
+            if (!Global.getSettings().fileExistsInCommon(INDEX)) return out;
+            JSONArray files = new JSONObject(Global.getSettings().readTextFileFromCommon(INDEX)).optJSONArray("files");
+            for (int i = 0; files != null && i < files.length(); i++) {
+                JSONObject f = files.optJSONObject(i);
+                if (f == null || f.optString("file").isEmpty()) continue;
+                if (Global.getSettings().fileExistsInCommon(commonPath(f.optString("file"))))
+                    out.add(new String[]{f.optString("file"), f.optString("system", f.optString("file"))});
+            }
+        } catch (Exception ex) {
+            Global.getLogger(SystemFile.class).warn("Worldsmith: could not read the export list", ex);
+        }
+        return out;
+    }
+
+    /** Puts an export at the top of the list importsystem shows. */
+    static void remember(String file, String systemName) {
+        try {
+            JSONArray files = new JSONArray();
+            JSONObject first = new JSONObject();
+            first.put("file", file);
+            first.put("system", systemName);
+            files.put(first);
+            for (String[] e : knownExports()) {
+                if (e[0].equals(file)) continue;
+                JSONObject o = new JSONObject();
+                o.put("file", e[0]);
+                o.put("system", e[1]);
+                files.put(o);
+            }
+            JSONObject root = new JSONObject();
+            root.put("files", files);
+            Global.getSettings().writeTextFileToCommon(INDEX, root.toString(2));
+        } catch (Exception ex) {
+            Global.getLogger(SystemFile.class).warn("Worldsmith: could not update the export list", ex);
+        }
+    }
+
+    /** "alexandretta (Alexandretta), corvus (Corvus)", or null if none are known. */
+    static String exportList() {
+        List<String> parts = new ArrayList<>();
+        for (String[] e : knownExports()) parts.add(e[0] + " (" + e[1] + ")");
+        return parts.isEmpty() ? null : String.join(", ", parts);
+    }
+
     /** Where the file is, as the player finds it. */
     static String diskPath(String file) {
         return "Starsector/saves/common/worldsmith/" + file + ".json.data";
@@ -140,12 +191,21 @@ final class SystemFile {
         return false;
     }
 
-    private static boolean conditionExists(String id) {
-        try {
-            return Global.getSettings().getMarketConditionSpec(id) != null;
-        } catch (Exception ex) {
-            return false;
+    /**
+     * Conditions a planet can have without a colony: the ones the planet generator rolls (resources, ruins,
+     * atmosphere, gravity...). Colony conditions like Pather cells or a free port are left out.
+     */
+    private static Set<String> naturalConditions() {
+        Set<String> out = new HashSet<>();
+        for (ConditionGenDataSpec g : Global.getSettings().getAllSpecs(ConditionGenDataSpec.class)) {
+            if (g.getId().endsWith(ConditionGenDataSpec.NO_PICK_SUFFIX)) continue;
+            try {
+                if (Global.getSettings().getMarketConditionSpec(g.getId()) != null) out.add(g.getId());
+            } catch (Exception ignored) {
+                // a generator entry without a condition behind it
+            }
         }
+        return out;
     }
 
     private static <E extends Enum<E>> E enumOr(Class<E> type, String name, E fallback) {
@@ -516,7 +576,8 @@ final class SystemFile {
             float centerOffset = mainOrbit == null ? 0f : num(mainOrbit, "radius", 0f);
 
             // other stars, planets and moons, in the file's order (what something orbits comes first)
-            int stars = 1, planets = 0;
+            Set<String> natural = naturalConditions();
+            int stars = 1, planets = 0, leftOut = 0;
             List<String> skipped = new ArrayList<>();
             JSONArray bodies = root.optJSONArray("bodies");
             for (int i = 0; bodies != null && i < bodies.length(); i++) {
@@ -553,8 +614,11 @@ final class SystemFile {
                     if (m != null && conditions != null) {
                         for (int k = 0; k < conditions.length(); k++) {
                             String c = conditions.optString(k, "");
-                            // Population belongs to a colony, and conditions from missing mods can't be added.
-                            if (c.isEmpty() || c.startsWith("population_") || m.hasCondition(c) || !conditionExists(c)) continue;
+                            if (c.isEmpty() || m.hasCondition(c)) continue;
+                            if (!natural.contains(c)) {
+                                leftOut++;
+                                continue;
+                            }
                             m.addCondition(c);
                         }
                         m.reapplyConditions();
@@ -696,6 +760,7 @@ final class SystemFile {
                     + " conditions), " + rings + " ring(s), " + belts + " asteroid belt(s), " + fields + " field(s), "
                     + objects + " object(s) and " + jumps + " jump point(s).");
             if (objects > 0) msg.append(" Relays, buoys and arrays start unclaimed.");
+            if (leftOut > 0) msg.append(" Left out: ").append(leftOut).append(" colony condition(s), like population.");
             if (otherObjects > 0)
                 msg.append(" Not rebuilt: ").append(otherObjects).append(" station(s), wreck(s) or other object(s).");
             if (otherTerrain > 0) msg.append(" Not rebuilt: ").append(otherTerrain).append(" nebula or other terrain.");

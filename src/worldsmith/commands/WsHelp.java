@@ -129,11 +129,12 @@ public class WsHelp implements BaseCommandWithSuggestion {
                 "exportsystem [system]: writes the system you are in (or the one you name) to a JSON file in\n"
                         + "  Starsector/saves/common/worldsmith/, named after it (the game adds .data to the name).\n"
                         + "  Modders can rebuild the system in their own mod from it.\n"
-                        + "importsystem <file> [new name]: in hyperspace, builds a saved system at your position:\n"
+                        + "importsystem [file] [new name]: in hyperspace, builds a saved system at your position:\n"
                         + "  stars, planets with their conditions, rings, belts, fields, relays, buoys, arrays,\n"
                         + "  stable locations, gates and jump points. Planets come uncolonized; colonies and\n"
-                        + "  stations aren't rebuilt. To use someone else's file, put it in that folder as\n"
-                        + "  <name>.json.data.");
+                        + "  stations aren't rebuilt. If the system exists already, the copy is called\n"
+                        + "  'New <name>' unless you give a name. Alone, importsystem lists your exports.\n"
+                        + "  To use someone else's file, put it in that folder as <name>.json.data.");
         TOPICS.put("factions",
                 "factionpower <faction>: colonies, stability, unrest, disrupted industries, garrison damage,\n"
                         + "  Nexerelin invasion points (attacks happen when these build up) and troop reserves, plus any\n"

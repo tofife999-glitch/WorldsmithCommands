@@ -10,10 +10,13 @@ import org.lazywizard.console.Console;
 import org.lwjgl.util.vector.Vector2f;
 import worldsmith.WsUtil;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Rebuilds a star system saved with exportsystem at your position in hyperspace, under its own name or a new one.
+ * Rebuilds a star system saved with exportsystem at your position in hyperspace. If a system with its name exists
+ * (as when importing into the save it came from), the copy gets a free name like "New Corvus", unless you give one.
+ * Without a file name it lists the systems you exported.
  */
 public class ImportSystem implements BaseCommandWithSuggestion {
     private static final String USAGE = "importsystem <file> [new name]";
@@ -28,9 +31,10 @@ public class ImportSystem implements BaseCommandWithSuggestion {
         boolean yes = WsUtil.endsWithYes(parts);
         if (yes) parts.remove(parts.size() - 1);
         if (parts.isEmpty()) {
-            WsUtil.print("Usage: " + USAGE + "   (in hyperspace; the file is a system saved with exportsystem, in"
-                    + " Starsector/saves/common/worldsmith/)");
-            return CommandResult.BAD_SYNTAX;
+            String list = SystemFile.exportList();
+            WsUtil.print((list == null ? "You haven't exported any systems yet (exportsystem does that)."
+                    : "Systems you exported: " + list + ".") + " Usage: " + USAGE + "   (in hyperspace)");
+            return CommandResult.SUCCESS;
         }
         CampaignFleetAPI fleet = Global.getSector().getPlayerFleet();
         if (!fleet.getContainingLocation().isHyperspace()) {
@@ -44,11 +48,13 @@ public class ImportSystem implements BaseCommandWithSuggestion {
             return CommandResult.ERROR;
         }
 
-        String file = SystemFile.fileName(parts.get(0));
+        final String file = SystemFile.fileName(parts.get(0));
         String path = SystemFile.commonPath(file);
         if (!Global.getSettings().fileExistsInCommon(path)) {
-            WsUtil.print("There is no file " + SystemFile.diskPath(file) + ". Systems saved with exportsystem are there;"
-                    + " a file from someone else goes there too, named <name>.json.data.");
+            String list = SystemFile.exportList();
+            WsUtil.print("There is no system file called '" + file + "'. "
+                    + (list == null ? "" : "Systems you exported: " + list + ". ")
+                    + "A file from someone else goes into Starsector/saves/common/worldsmith/ as <name>.json.data.");
             return CommandResult.ERROR;
         }
         final JSONObject json;
@@ -63,29 +69,50 @@ public class ImportSystem implements BaseCommandWithSuggestion {
             WsUtil.print(why);
             return CommandResult.ERROR;
         }
+
+        String exported = json.optJSONObject("system").optString("name");
         String given = WsUtil.join(parts, 1, parts.size()).replace('_', ' ').trim();
-        final String name = given.isEmpty() ? json.optJSONObject("system").optString("name") : given;
-        if (!WsUtil.exactSystems(name).isEmpty()) {
-            WsUtil.print("A star system called '" + name + "' already exists. Give it a new name: importsystem " + file
-                    + " <new name>");
-            return CommandResult.ERROR;
+        String note = "";
+        String name;
+        if (!given.isEmpty()) {
+            if (!WsUtil.exactSystems(given).isEmpty()) {
+                WsUtil.print("A star system called '" + given + "' already exists. Pick another name.");
+                return CommandResult.ERROR;
+            }
+            name = given;
+        } else if (!WsUtil.exactSystems(exported).isEmpty()) {
+            // Importing into the save it came from: the copy gets a free name instead of stopping here.
+            name = freeName(exported);
+            note = " " + exported + " already exists here, so the copy is called " + name + " (or give a name: "
+                    + USAGE.replace("<file>", file) + ").";
+        } else {
+            name = exported;
         }
-        final String newName = given.isEmpty() ? null : given;
+        final String newName = name.equals(exported) ? null : name;
+
         if (yes) {
             WsUtil.cancelPending("importsystem");
+            if (!note.isEmpty()) WsUtil.print(note.trim());
             build(json, newName, loc);
             return CommandResult.SUCCESS;
         }
         String question = "Build the star system " + name + " from " + file + " here in hyperspace?";
-        WsUtil.print(question);
-        WsUtil.confirm("importsystem", question, "importsystem " + file + (newName == null ? "" : " " + newName.replace(' ', '_'))
-                + " yes", new Script() {
-            @Override
-            public void run() {
-                build(json, newName, loc);
-            }
-        });
+        WsUtil.print(question + note);
+        WsUtil.confirm("importsystem", question, "importsystem " + file + " " + name.replace(' ', '_') + " yes",
+                new Script() {
+                    @Override
+                    public void run() {
+                        build(json, newName, loc);
+                    }
+                });
         return CommandResult.SUCCESS;
+    }
+
+    /** "New Corvus", or "New Corvus 2", 3... if that is taken too. */
+    private static String freeName(String base) {
+        String candidate = "New " + base;
+        for (int n = 2; !WsUtil.exactSystems(candidate).isEmpty(); n++) candidate = "New " + base + " " + n;
+        return candidate;
     }
 
     private static void build(final JSONObject json, final String newName, final Vector2f loc) {
@@ -104,6 +131,8 @@ public class ImportSystem implements BaseCommandWithSuggestion {
 
     @Override
     public List<String> getSuggestions(int parameter, List<String> previous, CommandContext context) {
-        return WsUtil.list();
+        List<String> out = new ArrayList<>();
+        if (parameter == 0) for (String[] e : SystemFile.knownExports()) out.add(e[0]);
+        return out;
     }
 }

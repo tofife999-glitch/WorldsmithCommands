@@ -121,11 +121,13 @@ and `wshelp` has plain-language topics.
   `Starsector/saves/common/worldsmith/`, named after the system (the game adds `.data` to the name). It lists
   the stars, planets and moons with their orbits and conditions, rings, belts, fields, objects and jump points,
   plus colonies and stations, so modders can rebuild the system in their own mod.
-- `importsystem <file> [new name]`: in hyperspace, builds a saved system at your position (asks first): stars,
+- `importsystem [file] [new name]`: in hyperspace, builds a saved system at your position (asks first): stars,
   planets and moons with their conditions, rings, belts, fields, relays, buoys, arrays, stable locations, gates
-  and jump points. Planets come uncolonized and unsurveyed; colonies, stations and wrecks aren't rebuilt. Give a
-  new name if a system with its name exists; planets named after it get the new name. To use a file from
-  someone else, put it in that folder as `<name>.json.data`.
+  and jump points. Planets come uncolonized and unsurveyed; colonies, stations and wrecks aren't rebuilt. To use
+  a file from someone else, put it in that folder as `<name>.json.data`.
+  - no file: lists the systems you exported
+  - a new name: what the copy is called; planets named after the system follow it. Without one, a copy of a
+    system that already exists (as in the save it came from) is called `New <name>`.
 
 ## Removing things
 

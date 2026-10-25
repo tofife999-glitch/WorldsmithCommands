@@ -36,6 +36,7 @@ public class ExportSystem implements BaseCommandWithSuggestion {
         try {
             JSONObject json = SystemFile.export(sys, counts);
             Global.getSettings().writeTextFileToCommon(path, json.toString(2));
+            SystemFile.remember(file, sys.getName());
         } catch (Exception ex) {
             Global.getLogger(ExportSystem.class).error("Worldsmith: export of " + sys.getId() + " failed", ex);
             WsUtil.print("Could not write the file: " + ex.getMessage());
