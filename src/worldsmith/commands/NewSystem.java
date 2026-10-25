@@ -102,22 +102,9 @@ public class NewSystem implements BaseCommandWithSuggestion {
             return CommandResult.WRONG_CONTEXT;
         }
         final Vector2f loc = new Vector2f(fleet.getLocation());
-        if (Misc.isInAbyss(loc)) {
-            WsUtil.print("You are in the Abyss; new systems can't be placed there.");
-            return CommandResult.ERROR;
-        }
-        StarSystemAPI nearest = null;
-        float nearestLy = Float.MAX_VALUE;
-        for (StarSystemAPI s : Global.getSector().getStarSystems()) {
-            float d = Misc.getDistanceLY(loc, s.getLocation());
-            if (d < nearestLy) {
-                nearestLy = d;
-                nearest = s;
-            }
-        }
-        if (nearest != null && nearestLy < MIN_DISTANCE_LY) {
-            WsUtil.print("Too close to " + nearest.getName() + " (" + WsUtil.ly(nearestLy) + "); keep at least "
-                    + WsUtil.ly(MIN_DISTANCE_LY) + " away from other systems.");
+        String problem = placementProblem(loc);
+        if (problem != null) {
+            WsUtil.print(problem);
             return CommandResult.ERROR;
         }
 
@@ -182,6 +169,41 @@ public class NewSystem implements BaseCommandWithSuggestion {
         });
     }
 
+    /** Why a new system can't be placed at this spot in hyperspace, or null if it can. */
+    static String placementProblem(Vector2f loc) {
+        if (Misc.isInAbyss(loc)) return "You are in the Abyss; new systems can't be placed there.";
+        StarSystemAPI nearest = null;
+        float nearestLy = Float.MAX_VALUE;
+        for (StarSystemAPI s : Global.getSector().getStarSystems()) {
+            float d = Misc.getDistanceLY(loc, s.getLocation());
+            if (d < nearestLy) {
+                nearestLy = d;
+                nearest = s;
+            }
+        }
+        if (nearest != null && nearestLy < MIN_DISTANCE_LY) {
+            return "Too close to " + nearest.getName() + " (" + WsUtil.ly(nearestLy) + "); keep at least "
+                    + WsUtil.ly(MIN_DISTANCE_LY) + " away from other systems.";
+        }
+        return null;
+    }
+
+    /**
+     * The last steps for a new system: hyperspace ends for its jump points, the star's entrance and gravity wells at
+     * gas giants, and cleared hyperspace clouds around it, as StarSystemGenerator does for new constellations.
+     */
+    static void finish(StarSystemAPI sys, Vector2f loc) {
+        sys.generateAnchorIfNeeded();
+        sys.autogenerateHyperspaceJumpPoints(true, false);
+        HyperspaceTerrainPlugin plugin = (HyperspaceTerrainPlugin) Misc.getHyperspaceTerrain().getPlugin();
+        NebulaEditor editor = new NebulaEditor(plugin);
+        float minRadius = plugin.getTileSize() * 2f;
+        float r = sys.getMaxRadiusInHyperspace();
+        editor.clearArc(loc.x, loc.y, 0, r + minRadius * 0.5f, 0, 360f);
+        editor.clearArc(loc.x, loc.y, 0, r + minRadius, 0, 360f, 0.25f);
+        WsUtil.invalidateCache();
+    }
+
     /** Builds the system the way StarSystemGenerator does for a single star. */
     static String create(String name, String type, Vector2f loc, boolean fill) {
         Random random = new Random();
@@ -229,18 +251,7 @@ public class NewSystem implements BaseCommandWithSuggestion {
         // An inner and a fringe jump point like generated systems have; autogenerate then gives each its
         // hyperspace end, plus the star's entrance and gravity wells at gas giants.
         JumpPoints.addStandard(sys, random);
-        sys.generateAnchorIfNeeded();
-        sys.autogenerateHyperspaceJumpPoints(true, false);
-
-        // Clear the hyperspace clouds around it, as StarSystemGenerator does for new constellations.
-        HyperspaceTerrainPlugin plugin = (HyperspaceTerrainPlugin) Misc.getHyperspaceTerrain().getPlugin();
-        NebulaEditor editor = new NebulaEditor(plugin);
-        float minRadius = plugin.getTileSize() * 2f;
-        float r = sys.getMaxRadiusInHyperspace();
-        editor.clearArc(loc.x, loc.y, 0, r + minRadius * 0.5f, 0, 360f);
-        editor.clearArc(loc.x, loc.y, 0, r + minRadius, 0, 360f, 0.25f);
-
-        WsUtil.invalidateCache();
+        finish(sys, loc);
         return "Created star system " + sys.getName() + " with the star " + star.getName() + " (" + star.getSpec().getName()
                 + ") at your position in hyperspace: " + contents + ", and " + WsUtil.hyperJumpPointsInto(sys).size()
                 + " jump points from hyperspace.";

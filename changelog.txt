@@ -1,5 +1,13 @@
 Worldsmith Console Commands - changelog
 
+1.3.0 (2026-10-25)
+- New exportsystem command: writes a star system to a JSON file (in saves/common/worldsmith) that lists everything
+  it is made of, for modders who want to build it into their own mod.
+- New importsystem command: rebuilds a saved system at your position in hyperspace, in any save.
+- New addwreck command: a derelict ship to salvage or recover, by size, faction or exact ship.
+- New warfocus command: a faction aims all its Nexerelin invasions and raids at one enemy for a while.
+- wshelp has a new 'export' topic.
+
 1.2.0 (2026-10-21)
 - New orbit command: move a planet, moon or companion star farther out or closer and make it faster or
   slower (in percent), or reverse it. 'tidallock' keeps a moon behind its planet, in its shadow, where

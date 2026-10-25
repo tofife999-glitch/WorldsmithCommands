@@ -203,6 +203,7 @@ public final class FactionCharacter {
 
     /** Pirate mode: Nexerelin treats it as a pirate faction, hostile to all but pirates, free ports, nothing illegal. */
     private static void setPirate(FactionAPI f, boolean pirate) {
+        IllegalGoods.forget(f);
         MemoryAPI mem = f.getMemoryWithoutUpdate();
         if (pirate) mem.set(MEM_PIRATE, true);
         else mem.unset(MEM_PIRATE);

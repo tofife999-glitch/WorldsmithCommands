@@ -55,7 +55,9 @@ public class WsHelp implements BaseCommandWithSuggestion {
                         + "Short names work too: stable, relay, buoy, sensor, gate, field, jumppoint. Without a name\n"
                         + "removeobject removes the nearest one where you are.\n"
                         + "addfield <asteroids|debris> [small|large] adds a field at your position; fields may overlap\n"
-                        + "anything.");
+                        + "anything.\n"
+                        + "addwreck [small|medium|large|civilian] [faction|ship]: a derelict ship next to you, to\n"
+                        + "salvage or recover; a ship name or hull ID (like paragon) picks that exact ship.");
         TOPICS.put("addring",
                 "addring [planet] <belt|dust|ice|magfield> adds terrain that works like vanilla's:\n"
                         + "  belt       an asteroid belt with asteroids\n"
@@ -123,6 +125,15 @@ public class WsHelp implements BaseCommandWithSuggestion {
                         + "addjumppoint [name]: a two-way jump point where you are. In a system it leads out to\n"
                         + "hyperspace; in hyperspace it leads into the nearest system (up to 3 light-years away).\n"
                         + "removeobject jumppoint removes both ends again.");
+        TOPICS.put("export",
+                "exportsystem [system]: writes the system you are in (or the one you name) to a JSON file in\n"
+                        + "  Starsector/saves/common/worldsmith/, named after it (the game adds .data to the name).\n"
+                        + "  Modders can rebuild the system in their own mod from it.\n"
+                        + "importsystem <file> [new name]: in hyperspace, builds a saved system at your position:\n"
+                        + "  stars, planets with their conditions, rings, belts, fields, relays, buoys, arrays,\n"
+                        + "  stable locations, gates and jump points. Planets come uncolonized; colonies and\n"
+                        + "  stations aren't rebuilt. To use someone else's file, put it in that folder as\n"
+                        + "  <name>.json.data.");
         TOPICS.put("factions",
                 "factionpower <faction>: colonies, stability, unrest, disrupted industries, garrison damage,\n"
                         + "  Nexerelin invasion points (attacks happen when these build up) and troop reserves, plus any\n"
@@ -166,6 +177,8 @@ public class WsHelp implements BaseCommandWithSuggestion {
                         + "factionlore <faction> <text>: the text on its Intel faction page. 'add <text>' adds a\n"
                         + "  paragraph, a | starts a new paragraph, 'reset' restores it. Don't use ; in the text (the\n"
                         + "  console splits commands at ;).\n"
+                        + "factionillegal <faction> [<commodity> illegal|legal | reset]: what any faction bans. Its\n"
+                        + "  markets sell banned goods only on the black market, and its patrols look for them.\n"
                         + "rename faction <faction> <new name>: renames any faction.\n"
                         + "Note: once a save has run with this mod, keep the mod installed for that save.");
         TOPICS.put("war",
@@ -178,6 +191,8 @@ public class WsHelp implements BaseCommandWithSuggestion {
                         + "  system's biggest colony for about two months, then leaves. Without a war, only the\n"
                         + "  armada turns hostile for the attack.\n"
                         + "rebellion [colony] [backing faction]: a Nexerelin rebellion in one colony.\n"
+                        + "warfocus <faction> <enemy> [days]: it aims all its invasions and raids at that enemy\n"
+                        + "  (default 180 days, or until peace). warfocus lists them; 'off' ends one.\n"
                         + "Already in other mods, for one pair of factions:\n"
                         + "  setrelation / adjustrelation <faction> [other] <amount>   (Console Commands)\n"
                         + "  creatediplomacyevent <a> <b> declare_war|peace_treaty|ceasefire   (Nexerelin)\n"
@@ -235,7 +250,11 @@ public class WsHelp implements BaseCommandWithSuggestion {
             case "factionships": case "factiondoctrine": case "factionpersonality": case "doctrine":
             case "personality": return "newfaction";
             case "wars": case "totalwar": case "totalpeace": case "peace": case "diplomacy": case "armada":
-            case "rebellion": return "war";
+            case "rebellion": case "warfocus": case "focus": case "invasions": case "invasion": return "war";
+            case "exportsystem": case "importsystem": case "export": case "import": case "json": case "share":
+                return "export";
+            case "addwreck": case "wreck": case "wrecks": case "derelict": return "objects";
+            case "factionillegal": case "illegal": case "contraband": case "laws": return "newfaction";
             case "expeditions": case "expedition": case "colonies": return "factions";
             case "orbits": case "tidallock": case "tidal": case "lock": return "orbit";
             case "remnant": case "bombard": case "revolution": return "apocalypse";

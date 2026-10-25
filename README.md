@@ -103,12 +103,29 @@ and `wshelp` has plain-language topics.
   - `asteroids`: an asteroid field
   - `debris`: a debris field you can salvage
   - `small` / `large`: its size (otherwise in between)
+- `addwreck [size] [faction|ship]`: a derelict ship next to you, placed the way the sector generator does it:
+  salvage it, or recover the ship if you're lucky.
+  - `small`, `medium`, `large` (cruisers and capitals) or `civilian`: its size
+  - a faction: one of its ships (otherwise a random faction's)
+  - a ship name or hull ID, like `paragon`: that exact ship
 - `addjumppoint [name]`: a two-way jump point where you are. In a system, it leads out to hyperspace;
   in hyperspace, it leads into the nearest system (at most 3 light-years away).
 - `hyperclouds <clear|add> [radius]`: in hyperspace, around you.
   - `clear`: removes the clouds and the storms in them
   - `add`: grows new clouds (star systems keep their clear space)
   - radius: 0.5 to 5 light-years, 1 if you leave it out
+
+## Sharing systems
+
+- `exportsystem [system]`: writes the system you are in, or the one you name, to a JSON file in
+  `Starsector/saves/common/worldsmith/`, named after the system (the game adds `.data` to the name). It lists
+  the stars, planets and moons with their orbits and conditions, rings, belts, fields, objects and jump points,
+  plus colonies and stations, so modders can rebuild the system in their own mod.
+- `importsystem <file> [new name]`: in hyperspace, builds a saved system at your position (asks first): stars,
+  planets and moons with their conditions, rings, belts, fields, relays, buoys, arrays, stable locations, gates
+  and jump points. Planets come uncolonized and unsurveyed; colonies, stations and wrecks aren't rebuilt. Give a
+  new name if a system with its name exists; planets named after it get the new name. To use a file from
+  someone else, put it in that folder as `<name>.json.data`.
 
 ## Removing things
 
@@ -148,6 +165,12 @@ Everything here asks Yes/Cancel first.
   - any text: replaces it (a `|` starts a new paragraph; don't use `;`, the console splits commands there)
   - `add <text>`: adds a paragraph
   - `reset`: brings back the original
+
+- `factionillegal <faction> [option]`: what a faction considers illegal: its markets sell those goods only on
+  the black market, and its patrols treat them as contraband. Works for every faction.
+  - no option: lists what it bans
+  - `<commodity> illegal` / `<commodity> legal`: changes one, e.g. `factionillegal hegemony drugs legal`
+  - `reset`: undoes every change made with this command
 
 These three shape a faction made with `spawnfaction`. Without an option, each one shows the current
 setting, and every setting stays in the save.
@@ -221,6 +244,12 @@ setting, and every setting stays in the save.
   the one you are in), attacks its biggest colony for about two months, then leaves. If the two factions
   aren't at war, only the armada turns hostile; no war is declared.
   - `small` / `medium` / `large`: its size (medium if you leave it out)
+- `warfocus <faction> <enemy> [days]`: the faction aims all its Nexerelin invasions and raids at that
+  enemy, for 180 days or the days you give (30-1825), or until they make peace. It spends the faction's own
+  invasion points, so it doesn't add invasions; they must already be at war.
+  - no options: lists the war focuses
+  - only a faction: its focus and how close it is to the next invasion
+  - `off`: it picks its targets by itself again
 - `rebellion [colony] [faction]`: a Nexerelin rebellion in one colony. The rebels fight for the faction
   you name, or for one Nexerelin picks, or for independence. If they win, the colony changes hands.
 
